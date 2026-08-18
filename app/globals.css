@@ -1,6 +1,6 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -43,24 +43,24 @@
 
 :root {
   color-scheme: light;
-  --background: oklch(0.98 0.008 70);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.24 0.02 45);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.24 0.02 45);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.24 0.02 45);
-  --primary: oklch(0.55 0.16 40);
+  --primary: oklch(0.36 0.17 264);
   --primary-foreground: oklch(0.99 0.01 70);
-  --secondary: oklch(0.94 0.02 70);
-  --secondary-foreground: oklch(0.34 0.03 45);
-  --muted: oklch(0.95 0.015 70);
+  --secondary: oklch(0.86 0.18 92);
+  --secondary-foreground: oklch(18.483% 0.0098 107.363);
+  --muted: oklch(96.827% 0.04803 104.754);
   --muted-foreground: oklch(0.52 0.02 50);
   --accent: oklch(0.93 0.03 65);
   --accent-foreground: oklch(0.34 0.05 45);
   --destructive: oklch(0.55 0.2 27);
   --border: oklch(0.9 0.015 65);
   --input: oklch(0.9 0.015 65);
-  --ring: oklch(0.55 0.16 40);
+  --ring: oklch(0.36 0.17 264);
 
   --pending: oklch(0.58 0.2 25);
   --pending-foreground: oklch(0.99 0.01 70);
@@ -72,7 +72,7 @@
   --radius: 0.75rem;
 }
 
-.dark {
+/* .dark {
   color-scheme: dark;
   --background: oklch(0.2 0.015 50);
   --foreground: oklch(0.95 0.01 70);
@@ -99,38 +99,7 @@
   --reserved-foreground: oklch(0.24 0.05 60);
   --delivered: oklch(0.68 0.13 158);
   --delivered-foreground: oklch(0.18 0.03 155);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    color-scheme: dark;
-    --background: oklch(0.2 0.015 50);
-    --foreground: oklch(0.95 0.01 70);
-    --card: oklch(0.25 0.018 50);
-    --card-foreground: oklch(0.95 0.01 70);
-    --popover: oklch(0.25 0.018 50);
-    --popover-foreground: oklch(0.95 0.01 70);
-    --primary: oklch(0.68 0.16 42);
-    --primary-foreground: oklch(0.2 0.02 45);
-    --secondary: oklch(0.3 0.02 50);
-    --secondary-foreground: oklch(0.92 0.01 70);
-    --muted: oklch(0.3 0.02 50);
-    --muted-foreground: oklch(0.72 0.02 60);
-    --accent: oklch(0.34 0.03 50);
-    --accent-foreground: oklch(0.95 0.01 70);
-    --destructive: oklch(0.62 0.2 27);
-    --border: oklch(1 0 0 / 12%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.68 0.16 42);
-
-    --pending: oklch(0.62 0.2 25);
-    --pending-foreground: oklch(0.98 0.01 70);
-    --reserved: oklch(0.78 0.15 78);
-    --reserved-foreground: oklch(0.24 0.05 60);
-    --delivered: oklch(0.68 0.13 158);
-    --delivered-foreground: oklch(0.18 0.03 155);
-  }
-}
+} */
 
 @layer base {
   * {
