@@ -37,10 +37,18 @@ const RADIUS_OPTIONS = [
   { label: "10 km", value: 10 },
 ];
 
+const STATUS_OPTIONS = [
+  { label: "Todos", value: null },
+  { label: "Pendientes", value: "pending" },
+  { label: "Reservados", value: "reserved" },
+  { label: "Entregados", value: "delivered" },
+];
+
 export function HelpMapView({ points }: { points: PointWithItems[] }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [category, setCategory] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null,
@@ -83,6 +91,19 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
         // Category filter: keep points that have at least one item in category
         if (category && !p.items.some((i) => i.category === category))
           return false;
+        // Status filter: "delivered" requires all items to be delivered
+        if (statusFilter === "delivered") {
+          if (
+            p.items.length === 0 ||
+            !p.items.every((i) => i.status === "delivered")
+          )
+            return false;
+        } else if (
+          statusFilter &&
+          !p.items.some((i) => i.status === statusFilter)
+        ) {
+          return false;
+        }
         // Radius filter (only when we know user location)
         if (radiusKm != null && p.distance != null && p.distance > radiusKm)
           return false;
@@ -93,7 +114,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
           return a.distance - b.distance;
         return 0;
       });
-  }, [points, category, radiusKm, userLocation]);
+  }, [points, category, statusFilter, radiusKm, userLocation]);
 
   const selected = filtered.find((p) => p.id === selectedId) ?? null;
 
@@ -120,6 +141,17 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
                 active={category === c.value}
                 onClick={() => setCategory(c.value)}>
                 {c.label}
+              </FilterChip>
+            ))}
+          </div>
+          <p className="font-semibold mt-4 text-sm">Estado</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {STATUS_OPTIONS.map((s) => (
+              <FilterChip
+                key={s.label}
+                active={statusFilter === s.value}
+                onClick={() => setStatusFilter(s.value)}>
+                {s.label}
               </FilterChip>
             ))}
           </div>
@@ -237,16 +269,17 @@ function PointList({
       </div>
       {points.map((p) => {
         const pending = p.items.filter((i) => i.status === "pending").length;
-        const total = p.items.length;
+        const reserved = p.items.filter((i) => i.status === "reserved").length;
         const delivered = p.items.filter(
           (i) => i.status === "delivered",
         ).length;
+        const total = p.items.length;
         const allDone = total > 0 && delivered === total;
         return (
           <button
             key={p.id}
             onClick={() => onSelect(p.id)}
-            className="w-full rounded-xl border border-border bg-background p-3.5 text-left transition-colors hover:border-primary/50 hover:bg-muted/40">
+            className="w-full rounded-xl border border-border bg-background p-3.5 text-left transition-colors hover:border-secondary hover:bg-muted/40 ">
             <div className="flex items-start justify-between gap-2">
               <span className="font-medium">{p.name}</span>
               {p.distance != null && (
@@ -269,10 +302,20 @@ function PointList({
                   Atendido completo
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 font-medium text-pending">
-                  <StatusDot status="pending" />
-                  {pending} {pending === 1 ? "pendiente" : "pendientes"}
-                </span>
+                <div className="flex items-center gap-2.5">
+                  {pending > 0 && (
+                    <span className="inline-flex items-center gap-1 font-medium text-pending">
+                      <StatusDot status="pending" />
+                      {pending} {pending === 1 ? "pendiente" : "pendientes"}
+                    </span>
+                  )}
+                  {reserved > 0 && (
+                    <span className="inline-flex items-center gap-1 font-medium text-reserved">
+                      <StatusDot status="reserved" />
+                      {reserved} {reserved === 1 ? "reservado" : "reservados"}
+                    </span>
+                  )}
+                </div>
               )}
               <span>{total} ítems</span>
             </div>
