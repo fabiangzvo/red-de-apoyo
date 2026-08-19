@@ -100,6 +100,7 @@ export function RequestHelpForm() {
     setFormError(null);
     if (!name.trim())
       return setFormError("Escribe un nombre o referencia del punto.");
+    if (!contact.trim()) return setFormError("Escribe tu número de contacto.");
     if (!position)
       return setFormError("Fija tu ubicación en el mapa antes de publicar.");
     if (validItems.length === 0)
@@ -208,7 +209,7 @@ export function RequestHelpForm() {
             />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Contacto (opcional)">
+            <Field label="Contacto" required>
               <input
                 value={contact}
                 onChange={(e) => setContact(e.target.value)}
