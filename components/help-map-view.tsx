@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   CircleCheckBig,
@@ -46,9 +46,14 @@ const STATUS_OPTIONS = [
 
 export function HelpMapView({ points }: { points: PointWithItems[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status");
+
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [category, setCategory] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(
+    initialStatus,
+  );
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null,
@@ -56,6 +61,24 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
   const [volunteerName, setVolunteerName] = useState("");
   const [volunteerContact, setVolunteerContact] = useState("");
   const [nameHint, setNameHint] = useState(false);
+
+  useEffect(() => {
+    const statusParam = searchParams.get("status");
+    setStatusFilter(statusParam);
+  }, [searchParams]);
+
+  function handleStatusChange(value: string | null) {
+    setStatusFilter(value);
+    const params = new URLSearchParams(window.location.search);
+    if (value) {
+      params.set("status", value);
+    } else {
+      params.delete("status");
+    }
+    const query = params.toString();
+    const newUrl = query ? `/mapa?${query}` : "/mapa";
+    router.replace(newUrl, { scroll: false });
+  }
 
   function useMyLocation() {
     if (!("geolocation" in navigator)) return;
@@ -150,7 +173,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
               <FilterChip
                 key={s.label}
                 active={statusFilter === s.value}
-                onClick={() => setStatusFilter(s.value)}>
+                onClick={() => handleStatusChange(s.value)}>
                 {s.label}
               </FilterChip>
             ))}
@@ -485,17 +508,13 @@ function FilterChip({
 
 export function EmptyState() {
   return (
-    <div className="mx-auto max-w-md rounded-2xl border border-border bg-card p-8 text-center">
-      <MapPin className="mx-auto size-8 text-muted-foreground" aria-hidden />
+    <div className="mx-auto max-w-md rounded-2xl bg-card p-8 text-center">
+      <MapPin className="mx-auto size-12 text-[#CE1126]" aria-hidden />
       <h2 className="mt-4 font-display text-xl font-bold">Aún no hay puntos</h2>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        Todavía nadie ha publicado una lista de necesidades. Sé el primero en
-        registrar un punto de ayuda.
+      <p className="mt-2 text-lg leading-relaxed text-muted-foreground">
+        Todavía nadie ha publicado una lista de necesidades. Agradecemos tu
+        disposición.
       </p>
-      <Button className="mt-5" render={<Link href="/solicitar" />}>
-        <PlusCircle className="size-4" aria-hidden />
-        Solicitar ayuda
-      </Button>
     </div>
   );
 }

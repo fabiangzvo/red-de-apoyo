@@ -44,18 +44,21 @@ export function LiveStatPanel({ stats }: { stats: Stats }) {
             value={stats.pending}
             label="Pendientes"
             tone="text-pending"
+            href="/mapa?status=pending"
           />
           <StatCell
             Icon={Clock}
             value={stats.reserved}
             label="Reservados"
             tone="text-reserved-foreground"
+            href="/mapa?status=reserved"
           />
           <StatCell
             Icon={CircleCheckBig}
             value={stats.delivered}
             label="Entregados"
             tone="text-delivered"
+            href="/mapa?status=delivered"
           />
         </div>
         <Button
@@ -81,17 +84,21 @@ function StatCell({
   value,
   label,
   tone,
+  href,
 }: {
   Icon: typeof Clock;
   value: number;
   label: string;
   tone: string;
+  href: string;
 }) {
   return (
-    <div className="not-first:border-l border-border bg-background p-3">
+    <Link
+      href={href}
+      className="bg-secondary/10 p-3 rounded-lg hover:bg-muted transition-colors block cursor-pointer">
       <Icon className={`mx-auto size-6 ${tone}`} aria-hidden strokeWidth={3} />
       <div className="mt-1.5 font-display text-xl font-bold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
-    </div>
+    </Link>
   );
 }

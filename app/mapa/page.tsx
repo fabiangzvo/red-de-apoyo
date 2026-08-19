@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
@@ -36,7 +37,13 @@ export default async function MapaPage() {
           </Button>
         </div>
 
-        {points.length === 0 ? <EmptyState /> : <HelpMapView points={points} />}
+        {points.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <Suspense>
+            <HelpMapView points={points} />
+          </Suspense>
+        )}
       </main>
     </div>
   );
