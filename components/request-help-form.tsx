@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useMemo, useState } from "react"
-import dynamic from "next/dynamic"
-import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CircleCheckBig,
@@ -11,11 +11,11 @@ import {
   MapPin,
   Plus,
   Trash2,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { CATEGORIES, categoryLabel } from "@/lib/constants"
-import { createNeedsList, type NewItemInput } from "@/app/actions/needs"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CATEGORIES, categoryLabel } from "@/lib/constants";
+import { createNeedsList, type NewItemInput } from "@/app/actions/needs";
+import { cn } from "@/lib/utils";
 
 const LocationPickerMap = dynamic(
   () => import("@/components/location-picker-map"),
@@ -27,72 +27,85 @@ const LocationPickerMap = dynamic(
       </div>
     ),
   },
-)
+);
 
-type DraftItem = NewItemInput & { id: string }
+type DraftItem = NewItemInput & { id: string };
 
 function newDraft(): DraftItem {
-  return { id: crypto.randomUUID(), category: "alimentos", product: "", detail: "" }
+  return {
+    id: crypto.randomUUID(),
+    category: "alimentos",
+    product: "",
+    detail: "",
+  };
 }
 
 export function RequestHelpForm() {
-  const router = useRouter()
-  const [position, setPosition] = useState<[number, number] | null>(null)
-  const [gpsLoading, setGpsLoading] = useState(false)
-  const [gpsError, setGpsError] = useState<string | null>(null)
+  const router = useRouter();
+  const [position, setPosition] = useState<[number, number] | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
-  const [name, setName] = useState("")
-  const [contact, setContact] = useState("")
-  const [note, setNote] = useState("")
-  const [items, setItems] = useState<DraftItem[]>([newDraft()])
+  const [name, setName] = useState("");
+  const [contact, setContact] = useState("");
+  const [note, setNote] = useState("");
+  const [items, setItems] = useState<DraftItem[]>([newDraft()]);
 
-  const [submitting, setSubmitting] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   const validItems = useMemo(
     () => items.filter((i) => i.product.trim().length > 0),
     [items],
-  )
+  );
 
   function useMyLocation() {
-    setGpsError(null)
+    setGpsError(null);
     if (!("geolocation" in navigator)) {
-      setGpsError("Tu dispositivo no permite geolocalización. Fija el pin manualmente.")
-      return
+      setGpsError(
+        "Tu dispositivo no permite geolocalización. Fija el pin manualmente.",
+      );
+      return;
     }
-    setGpsLoading(true)
+    setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setPosition([pos.coords.latitude, pos.coords.longitude])
-        setGpsLoading(false)
+        setPosition([pos.coords.latitude, pos.coords.longitude]);
+        setGpsLoading(false);
       },
       () => {
-        setGpsError("No pudimos obtener tu ubicación. Toca el mapa para fijar el pin.")
-        setGpsLoading(false)
+        setGpsError(
+          "No pudimos obtener tu ubicación. Toca el mapa para fijar el pin.",
+        );
+        setGpsLoading(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },
-    )
+    );
   }
 
   function updateItem(id: string, patch: Partial<NewItemInput>) {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   }
   function addItem() {
-    setItems((prev) => [...prev, newDraft()])
+    setItems((prev) => [...prev, newDraft()]);
   }
   function removeItem(id: string) {
-    setItems((prev) => (prev.length === 1 ? prev : prev.filter((i) => i.id !== id)))
+    setItems((prev) =>
+      prev.length === 1 ? prev : prev.filter((i) => i.id !== id),
+    );
   }
 
   async function submit() {
-    setFormError(null)
-    if (!name.trim()) return setFormError("Escribe un nombre o referencia del punto.")
-    if (!position) return setFormError("Fija tu ubicación en el mapa antes de publicar.")
+    setFormError(null);
+    if (!name.trim())
+      return setFormError("Escribe un nombre o referencia del punto.");
+    if (!position)
+      return setFormError("Fija tu ubicación en el mapa antes de publicar.");
     if (validItems.length === 0)
-      return setFormError("Agrega al menos una necesidad a tu lista.")
+      return setFormError("Agrega al menos una necesidad a tu lista.");
 
-    setSubmitting(true)
+    setSubmitting(true);
     const res = await createNeedsList({
       name: name.trim(),
       contact: contact.trim() || undefined,
@@ -104,14 +117,14 @@ export function RequestHelpForm() {
         product: i.product,
         detail: i.detail,
       })),
-    })
-    setSubmitting(false)
+    });
+    setSubmitting(false);
 
     if (!res.ok) {
-      setFormError(res.error)
-      return
+      setFormError(res.error);
+      return;
     }
-    setDone(true)
+    setDone(true);
   }
 
   if (done) {
@@ -120,7 +133,9 @@ export function RequestHelpForm() {
         <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-delivered/15 text-delivered">
           <CircleCheckBig className="size-7" aria-hidden />
         </span>
-        <h2 className="mt-5 font-display text-2xl font-bold">¡Lista publicada!</h2>
+        <h2 className="mt-5 font-display text-2xl font-bold">
+          ¡Lista publicada!
+        </h2>
         <p className="mt-2 text-pretty leading-relaxed text-muted-foreground">
           Tu punto ya aparece en el mapa de ayuda con {validItems.length}{" "}
           {validItems.length === 1 ? "necesidad" : "necesidades"}. Los donantes
@@ -131,12 +146,15 @@ export function RequestHelpForm() {
             Ver el mapa
             <ArrowRight className="size-4" aria-hidden />
           </Button>
-          <Button variant="outline" onClick={() => router.refresh()} render={<a href="/" />}>
+          <Button
+            variant="outline"
+            onClick={() => router.refresh()}
+            render={<a href="/" />}>
             Volver al inicio
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -150,10 +168,17 @@ export function RequestHelpForm() {
 
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
           <div className="h-[320px] w-full">
-            <LocationPickerMap value={position} onChange={(lat, lng) => setPosition([lat, lng])} />
+            <LocationPickerMap
+              value={position}
+              onChange={(lat, lng) => setPosition([lat, lng])}
+            />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-card p-3">
-            <Button variant="outline" size="sm" onClick={useMyLocation} disabled={gpsLoading}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={useMyLocation}
+              disabled={gpsLoading}>
               {gpsLoading ? (
                 <LoaderCircle className="size-4 animate-spin" aria-hidden />
               ) : (
@@ -169,7 +194,9 @@ export function RequestHelpForm() {
             </span>
           </div>
         </div>
-        {gpsError && <p className="mt-2 text-sm text-destructive">{gpsError}</p>}
+        {gpsError && (
+          <p className="mt-2 text-sm text-destructive">{gpsError}</p>
+        )}
 
         <div className="mt-5 grid gap-3">
           <Field label="Nombre o referencia del punto" required>
@@ -193,7 +220,7 @@ export function RequestHelpForm() {
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Ej: 4 personas, 2 menores"
+                placeholder="Algún dato extra si lo deseas "
                 className={inputCls}
               />
             </Field>
@@ -211,7 +238,9 @@ export function RequestHelpForm() {
 
         <div className="mt-4 flex flex-col gap-3">
           {items.map((item, idx) => (
-            <div key={item.id} className="rounded-xl border border-border bg-card p-4">
+            <div
+              key={item.id}
+              className="rounded-xl border border-border bg-card p-4">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">
                   Ítem {idx + 1}
@@ -221,8 +250,7 @@ export function RequestHelpForm() {
                   size="icon-sm"
                   onClick={() => removeItem(item.id)}
                   disabled={items.length === 1}
-                  aria-label={`Eliminar ítem ${idx + 1}`}
-                >
+                  aria-label={`Eliminar ítem ${idx + 1}`}>
                   <Trash2 className="size-4" aria-hidden />
                 </Button>
               </div>
@@ -239,8 +267,7 @@ export function RequestHelpForm() {
                         item.category === c.value
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border bg-background text-muted-foreground hover:bg-muted",
-                      )}
-                    >
+                      )}>
                       {c.label}
                     </button>
                   ))}
@@ -249,7 +276,9 @@ export function RequestHelpForm() {
                   <Field label="Elemento / producto">
                     <input
                       value={item.product}
-                      onChange={(e) => updateItem(item.id, { product: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(item.id, { product: e.target.value })
+                      }
                       placeholder="Ej: Tejas de zinc"
                       className={inputCls}
                     />
@@ -257,7 +286,9 @@ export function RequestHelpForm() {
                   <Field label="Cantidad / detalle">
                     <input
                       value={item.detail ?? ""}
-                      onChange={(e) => updateItem(item.id, { detail: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(item.id, { detail: e.target.value })
+                      }
                       placeholder="Ej: 5 unidades"
                       className={inputCls}
                     />
@@ -284,19 +315,19 @@ export function RequestHelpForm() {
               {validItems.map((i) => (
                 <li
                   key={i.id}
-                  className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
-                >
+                  className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground">
                   {categoryLabel(i.category)}: {i.product.trim()}
                 </li>
               ))}
             </ul>
           )}
-          {formError && <p className="mt-3 text-sm text-destructive">{formError}</p>}
+          {formError && (
+            <p className="mt-3 text-sm text-destructive">{formError}</p>
+          )}
           <Button
             className="mt-4 h-11 w-full text-base"
             onClick={submit}
-            disabled={submitting}
-          >
+            disabled={submitting}>
             {submitting ? (
               <>
                 <LoaderCircle className="size-5 animate-spin" aria-hidden />
@@ -309,20 +340,20 @@ export function RequestHelpForm() {
         </div>
       </section>
     </div>
-  )
+  );
 }
 
 const inputCls =
-  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30";
 
 function Field({
   label,
   required,
   children,
 }: {
-  label: string
-  required?: boolean
-  children: React.ReactNode
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -332,7 +363,7 @@ function Field({
       </span>
       {children}
     </label>
-  )
+  );
 }
 
 function StepHeading({ n, title }: { n: number; title: string }) {
@@ -343,5 +374,5 @@ function StepHeading({ n, title }: { n: number; title: string }) {
       </span>
       <h2 className="font-display text-xl font-bold tracking-tight">{title}</h2>
     </div>
-  )
+  );
 }
