@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { CircleCheckBig, CircleDashed, Clock, HandHeart, HeartHandshake, PlusCircle, MapPin } from "lucide-react";
+import {
+  CircleCheckBig,
+  CircleDashed,
+  Clock,
+  HandHeart,
+  HeartHandshake,
+  PlusCircle,
+  MapPin,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { getPointsWithItems } from "@/app/actions/needs";
@@ -138,7 +146,7 @@ export default async function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
             <HeartHandshake className="size-4 text-primary" aria-hidden />
-            <span>Red de Apoyo Colombia</span>
+            <span>Levantandonos Colombia</span>
           </div>
           <p className="text-pretty text-center sm:text-right">
             Plataforma comunitaria sin ánimo de lucro.

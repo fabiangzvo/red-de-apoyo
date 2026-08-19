@@ -16,7 +16,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "Red de Apoyo Colombia — Ayuda humanitaria directa",
+  title: "Levantandonos Colombia — Ayuda humanitaria",
   description:
     "Conectamos ayuda humanitaria directa con las familias afectadas por el sismo. Publica tu lista de necesidades ítem por ítem o encuentra a quién ayudar en el mapa.",
   generator: "v0.app",
@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#c15a2e" },
-    { media: "(prefers-color-scheme: dark)", color: "#332621" },
+    { media: "(prefers-color-scheme: light)", color: "oklch(1 0 0)" },
+    { media: "(prefers-color-scheme: dark)", color: "oklch(1 0 0)" },
   ],
 };
 

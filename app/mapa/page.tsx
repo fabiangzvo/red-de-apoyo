@@ -1,21 +1,21 @@
-import type { Metadata } from "next"
-import Link from "next/link"
-import { PlusCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { SiteHeader } from "@/components/site-header"
-import { EmptyState, HelpMapView } from "@/components/help-map-view"
-import { getPointsWithItems } from "@/app/actions/needs"
+import type { Metadata } from "next";
+import Link from "next/link";
+import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/site-header";
+import { EmptyState, HelpMapView } from "@/components/help-map-view";
+import { getPointsWithItems } from "@/app/actions/needs";
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Mapa de ayuda — Red de Apoyo Colombia",
+  title: "Mapa de ayuda — Levantandonos Colombia",
   description:
     "Encuentra puntos afectados por el sismo, revisa sus necesidades ítem por ítem y encárgate de lo que puedas entregar.",
-}
+};
 
 export default async function MapaPage() {
-  const points = await getPointsWithItems()
+  const points = await getPointsWithItems();
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -39,5 +39,5 @@ export default async function MapaPage() {
         {points.length === 0 ? <EmptyState /> : <HelpMapView points={points} />}
       </main>
     </div>
-  )
+  );
 }

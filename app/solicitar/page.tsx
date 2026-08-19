@@ -1,12 +1,12 @@
-import type { Metadata } from "next"
-import { SiteHeader } from "@/components/site-header"
-import { RequestHelpForm } from "@/components/request-help-form"
+import type { Metadata } from "next";
+import { SiteHeader } from "@/components/site-header";
+import { RequestHelpForm } from "@/components/request-help-form";
 
 export const metadata: Metadata = {
-  title: "Solicitar ayuda — Red de Apoyo Colombia",
+  title: "Solicitar ayuda — Levantandonos Colombia",
   description:
     "Fija tu ubicación y construye tu lista de necesidades ítem por ítem para que los donantes puedan ayudarte.",
-}
+};
 
 export default function SolicitarPage() {
   return (
@@ -18,12 +18,13 @@ export default function SolicitarPage() {
             Solicitar ayuda
           </h1>
           <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">
-            Marca dónde estás y detalla exactamente qué necesitas. Cada ítem podrá
-            ser tomado por un voluntario distinto, así recibes apoyo por partes.
+            Marca dónde estás y detalla exactamente qué necesitas. Cada ítem
+            podrá ser tomado por un voluntario distinto, así recibes apoyo por
+            partes.
           </p>
         </div>
         <RequestHelpForm />
       </main>
     </div>
-  )
+  );
 }

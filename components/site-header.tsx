@@ -18,9 +18,9 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
           </span>
           <span className="flex flex-col leading-none">
             <span className="font-display text-base font-bold tracking-tight">
-              Red de Apoyo
+              Levantandonos
             </span>
-            <span className="text-xs text-muted-foreground">Colombia</span>
+            <span className="text-xs text-muted-foreground ">Colombia</span>
           </span>
         </Link>
 
