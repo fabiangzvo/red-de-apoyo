@@ -25,10 +25,10 @@ export function LiveStatPanel({ stats }: { stats: Stats }) {
   return (
     <div className="relative flex items-center">
       <div className="w-full rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <p className="text-sm font-medium text-muted-foreground">
-          En este momento
-        </p>
-        <div className="mt-4 flex items-baseline gap-2">
+        <div className="mt-4 flex flex-col items-center gap-2 justify-center">
+          <p className="text-sm font-medium text-muted-foreground text-center">
+            En este momento
+          </p>
           <span className="font-display text-5xl font-bold text-primary">
             {stats.families}
           </span>
