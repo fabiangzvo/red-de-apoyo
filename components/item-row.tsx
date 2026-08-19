@@ -26,6 +26,8 @@ export function ItemRow({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const isCurrentUserReserved = item.reservedByContact === volunteerContact;
+
   function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
     startTransition(async () => {
@@ -44,7 +46,9 @@ export function ItemRow({
       "userInfo",
       JSON.stringify({ name: volunteerName, phone: volunteerContact }),
     );
-    run(() => reserveItem(item.id, volunteerName.trim(), volunteerContact.trim()));
+    run(() =>
+      reserveItem(item.id, volunteerName.trim(), volunteerContact.trim()),
+    );
   }
 
   return (
@@ -102,7 +106,7 @@ export function ItemRow({
         </Button>
       )}
 
-      {status === "reserved" && (
+      {status === "reserved" && isCurrentUserReserved && (
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Button
             size="sm"
@@ -126,7 +130,7 @@ export function ItemRow({
         </div>
       )}
 
-      {status === "reserved" && (
+      {status === "reserved" && isCurrentUserReserved && (
         <p className="mt-2 text-xs text-reserved-foreground">
           Ítem reservado. Tienes 6 horas para realizar la entrega.
         </p>

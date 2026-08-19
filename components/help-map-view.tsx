@@ -11,6 +11,7 @@ import {
   PlusCircle,
   SlidersHorizontal,
   X,
+  RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ItemRow } from "@/components/item-row";
@@ -159,6 +160,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
               onBack={() => {
                 setSelectedId(null);
                 setNameHint(false);
+                router.refresh();
               }}
               onRefresh={() => router.refresh()}
             />
@@ -167,6 +169,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
               points={filtered}
               onSelect={setSelectedId}
               hasLocation={!!userLocation}
+              onRefresh={() => router.refresh()}
             />
           )}
         </div>
@@ -193,24 +196,40 @@ function PointList({
   points,
   onSelect,
   hasLocation,
+  onRefresh,
 }: {
   points: (PointWithItems & { distance: number | null })[];
   onSelect: (id: number) => void;
   hasLocation: boolean;
+  onRefresh: () => void;
 }) {
   if (points.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
         <p className="font-medium text-foreground">Sin resultados</p>
         <p className="mt-1">No hay puntos que coincidan con tus filtros.</p>
+        <RefreshCcw
+          className="size-8 cursor-pointer"
+          aria-hidden
+          onClick={onRefresh}
+        />
       </div>
     );
   }
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        {points.length} {points.length === 1 ? "punto" : "puntos"} de ayuda
-      </p>
+      <div className="flex justify-between">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {points.length} {points.length === 1 ? "punto" : "puntos"} de ayuda
+        </p>
+        <p>
+          <RefreshCcw
+            className="size-4 cursor-pointer"
+            aria-hidden
+            onClick={onRefresh}
+          />
+        </p>
+      </div>
       {points.map((p) => {
         const pending = p.items.filter((i) => i.status === "pending").length;
         const total = p.items.length;
