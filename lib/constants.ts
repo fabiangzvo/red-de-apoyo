@@ -2,6 +2,7 @@ export const CATEGORIES = [
   { value: "alimentos", label: "Alimentos" },
   { value: "medicinas", label: "Medicinas" },
   { value: "materiales", label: "Materiales" },
+  { value: "Salud", label: "Salud" },
 ] as const;
 
 export type CategoryValue = (typeof CATEGORIES)[number]["value"];

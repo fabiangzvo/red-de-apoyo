@@ -129,7 +129,7 @@ export function RequestHelpForm() {
 
   if (done) {
     return (
-      <div className="mx-auto max-w-lg rounded-2xl border border-border bg-card p-8 text-center">
+      <div className="mx-auto max-w-lg rounded-2xl bg-card p-8 text-center">
         <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-delivered/15 text-delivered">
           <CircleCheckBig className="size-7" aria-hidden />
         </span>

@@ -267,11 +267,6 @@ function PointList({
       <div className="py-12 text-center text-sm text-muted-foreground">
         <p className="font-medium text-foreground">Sin resultados</p>
         <p className="mt-1">No hay puntos que coincidan con tus filtros.</p>
-        <RefreshCcw
-          className="size-8 cursor-pointer"
-          aria-hidden
-          onClick={onRefresh}
-        />
       </div>
     );
   }
