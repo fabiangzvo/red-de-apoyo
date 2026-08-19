@@ -25,11 +25,18 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
         </Link>
 
         <nav className="flex items-center gap-2">
-          <Button variant="outline" size="sm" render={<Link href="/mapa" />}>
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href="/mapa" />}
+            className="py-4">
             <MapPinned className="size-4" aria-hidden />
             <span className="hidden sm:inline">Ver mapa</span>
           </Button>
-          <Button size="sm" render={<Link href="/solicitar" />}>
+          <Button
+            size="sm"
+            render={<Link href="/solicitar" />}
+            className="py-4">
             <PlusCircle className="size-4" aria-hidden />
             Solicitar ayuda
           </Button>

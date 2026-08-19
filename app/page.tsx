@@ -216,7 +216,7 @@ function PathCard({
         ))}
       </ol>
       <Button
-        className="mt-6 w-full"
+        className="mt-6 w-full py-5"
         variant={tone === "primary" ? "default" : "outline"}
         render={<Link href={cta.href} />}>
         <cta.Icon className="size-4" aria-hidden />
