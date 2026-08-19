@@ -19,7 +19,7 @@ export default async function HomePage() {
   const points = await getPointsWithItems();
   const allItems = points.flatMap((p) => p.items);
   const stats = {
-    families: points.length,
+    families: allItems.filter((i) => i.status !== "delivered").length,
     pending: allItems.filter((i) => i.status === "pending").length,
     reserved: allItems.filter((i) => i.status === "reserved").length,
     delivered: allItems.filter((i) => i.status === "delivered").length,
