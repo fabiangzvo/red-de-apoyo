@@ -31,9 +31,9 @@ const HelpMap = dynamic(() => import("@/components/help-map"), {
 });
 
 const RADIUS_OPTIONS = [
+  { label: "2 km", value: 2 },
   { label: "5 km", value: 5 },
-  { label: "15 km", value: 15 },
-  { label: "50 km", value: 50 },
+  { label: "10 km", value: 10 },
   { label: "Todo", value: null },
 ];
 
