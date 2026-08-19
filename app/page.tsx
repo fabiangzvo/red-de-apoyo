@@ -1,17 +1,9 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  CircleCheckBig,
-  CircleDashed,
-  Clock,
-  HandHeart,
-  HeartHandshake,
-  MapPin,
-  PlusCircle,
-} from "lucide-react";
+import { CircleCheckBig, CircleDashed, Clock, HandHeart, HeartHandshake, PlusCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { getPointsWithItems } from "@/app/actions/needs";
+import { LiveStatPanel } from "@/components/live-stat-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -69,51 +61,7 @@ export default async function HomePage() {
             </div>
 
             {/* Live stat panel */}
-            <div className="flex items-center">
-              <div className="w-full rounded-2xl border border-border bg-card p-6 shadow-sm ">
-                <p className="text-sm font-medium text-muted-foreground">
-                  En este momento
-                </p>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="font-display text-5xl font-bold text-primary">
-                    {stats.families}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {stats.families === 1
-                      ? "punto necesita apoyo"
-                      : "puntos necesitan apoyo"}
-                  </span>
-                </div>
-                <div className="mt-6 grid grid-cols-3 gap-3 text-center">
-                  <StatCell
-                    Icon={CircleDashed}
-                    value={stats.pending}
-                    label="Pendientes"
-                    tone="text-pending"
-                  />
-                  <StatCell
-                    Icon={Clock}
-                    value={stats.reserved}
-                    label="Reservados"
-                    tone="text-reserved-foreground"
-                  />
-                  <StatCell
-                    Icon={CircleCheckBig}
-                    value={stats.delivered}
-                    label="Entregados"
-                    tone="text-delivered"
-                  />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-6 w-full justify-between bg-secondary/10 py-5"
-                  render={<Link href="/mapa" />}>
-                  Ver el mapa de ayuda
-                  <ArrowRight className="size-4" aria-hidden />
-                </Button>
-              </div>
-            </div>
+            <LiveStatPanel stats={stats} />
           </div>
         </section>
 
@@ -213,7 +161,7 @@ function StatCell({
   tone: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-secondary/5 p-3">
+    <div className="not-first:border-l border-border bg-background p-3">
       <Icon className={`mx-auto size-6 ${tone}`} aria-hidden strokeWidth={3} />
       <div className="mt-1.5 font-display text-xl font-bold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
