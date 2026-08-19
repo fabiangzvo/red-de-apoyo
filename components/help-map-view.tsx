@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useMemo, useState } from "react"
-import dynamic from "next/dynamic"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   CircleCheckBig,
   Locate,
@@ -11,14 +11,14 @@ import {
   PlusCircle,
   SlidersHorizontal,
   X,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ItemRow } from "@/components/item-row"
-import { StatusDot } from "@/components/status-badge"
-import { CATEGORIES } from "@/lib/constants"
-import { haversineKm } from "@/lib/geo"
-import type { PointWithItems } from "@/app/actions/needs"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ItemRow } from "@/components/item-row";
+import { StatusDot } from "@/components/status-badge";
+import { CATEGORIES } from "@/lib/constants";
+import { haversineKm } from "@/lib/geo";
+import type { PointWithItems } from "@/app/actions/needs";
+import { cn } from "@/lib/utils";
 
 const HelpMap = dynamic(() => import("@/components/help-map"), {
   ssr: false,
@@ -27,56 +27,74 @@ const HelpMap = dynamic(() => import("@/components/help-map"), {
       Cargando mapa…
     </div>
   ),
-})
+});
 
 const RADIUS_OPTIONS = [
   { label: "5 km", value: 5 },
   { label: "15 km", value: 15 },
   { label: "50 km", value: 50 },
   { label: "Todo", value: null },
-]
+];
 
 export function HelpMapView({ points }: { points: PointWithItems[] }) {
-  const router = useRouter()
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [category, setCategory] = useState<string | null>(null)
-  const [radiusKm, setRadiusKm] = useState<number | null>(null)
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
-  const [volunteerName, setVolunteerName] = useState("")
-  const [nameHint, setNameHint] = useState(false)
+  const router = useRouter();
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(
+    null,
+  );
+  const [volunteerName, setVolunteerName] = useState("");
+  const [volunteerContact, setVolunteerContact] = useState("");
+  const [nameHint, setNameHint] = useState(false);
 
   function useMyLocation() {
-    if (!("geolocation" in navigator)) return
+    if (!("geolocation" in navigator)) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
       () => {},
       { enableHighAccuracy: true, timeout: 10000 },
-    )
+    );
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const userInfoStr = localStorage?.getItem("userInfo") || "{}";
+
+    if (userInfoStr) {
+      const userInfo = JSON.parse(userInfoStr);
+
+      setVolunteerName(userInfo?.name ?? "");
+      setVolunteerContact(userInfo?.phone ?? "");
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     return points
       .map((p) => {
         const distance = userLocation
           ? haversineKm(userLocation, [p.lat, p.lng])
-          : null
-        return { ...p, distance }
+          : null;
+        return { ...p, distance };
       })
       .filter((p) => {
         // Category filter: keep points that have at least one item in category
-        if (category && !p.items.some((i) => i.category === category)) return false
+        if (category && !p.items.some((i) => i.category === category))
+          return false;
         // Radius filter (only when we know user location)
         if (radiusKm != null && p.distance != null && p.distance > radiusKm)
-          return false
-        return true
+          return false;
+        return true;
       })
       .sort((a, b) => {
-        if (a.distance != null && b.distance != null) return a.distance - b.distance
-        return 0
-      })
-  }, [points, category, radiusKm, userLocation])
+        if (a.distance != null && b.distance != null)
+          return a.distance - b.distance;
+        return 0;
+      });
+  }, [points, category, radiusKm, userLocation]);
 
-  const selected = filtered.find((p) => p.id === selectedId) ?? null
+  const selected = filtered.find((p) => p.id === selectedId) ?? null;
 
   return (
     <div className="grid gap-4 lg:h-[calc(100svh-9rem)] lg:grid-cols-[380px_1fr]">
@@ -89,15 +107,16 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
             Filtros
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <FilterChip active={category === null} onClick={() => setCategory(null)}>
+            <FilterChip
+              active={category === null}
+              onClick={() => setCategory(null)}>
               Todas
             </FilterChip>
             {CATEGORIES.map((c) => (
               <FilterChip
                 key={c.value}
                 active={category === c.value}
-                onClick={() => setCategory(c.value)}
-              >
+                onClick={() => setCategory(c.value)}>
                 {c.label}
               </FilterChip>
             ))}
@@ -113,8 +132,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
                   key={r.label}
                   active={radiusKm === r.value}
                   disabled={!userLocation && r.value != null}
-                  onClick={() => setRadiusKm(r.value)}
-                >
+                  onClick={() => setRadiusKm(r.value)}>
                   {r.label}
                 </FilterChip>
               ))}
@@ -134,11 +152,13 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
               point={selected}
               volunteerName={volunteerName}
               setVolunteerName={setVolunteerName}
+              volunteerContact={volunteerContact}
+              setVolunteerContact={setVolunteerContact}
               nameHint={nameHint}
               onNeedName={() => setNameHint(true)}
               onBack={() => {
-                setSelectedId(null)
-                setNameHint(false)
+                setSelectedId(null);
+                setNameHint(false);
               }}
               onRefresh={() => router.refresh()}
             />
@@ -158,15 +178,15 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
           points={filtered}
           selectedId={selectedId}
           onSelect={(id) => {
-            setSelectedId(id)
-            setNameHint(false)
+            setSelectedId(id);
+            setNameHint(false);
           }}
           userLocation={userLocation}
           radiusKm={radiusKm}
         />
       </div>
     </div>
-  )
+  );
 }
 
 function PointList({
@@ -174,40 +194,39 @@ function PointList({
   onSelect,
   hasLocation,
 }: {
-  points: (PointWithItems & { distance: number | null })[]
-  onSelect: (id: number) => void
-  hasLocation: boolean
+  points: (PointWithItems & { distance: number | null })[];
+  onSelect: (id: number) => void;
+  hasLocation: boolean;
 }) {
   if (points.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 py-10 text-center">
-        <MapPin className="size-8 text-muted-foreground" aria-hidden />
-        <p className="text-sm text-muted-foreground">
-          No hay puntos que coincidan con tus filtros.
-        </p>
+      <div className="py-12 text-center text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">Sin resultados</p>
+        <p className="mt-1">No hay puntos que coincidan con tus filtros.</p>
       </div>
-    )
+    );
   }
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-xs font-medium text-muted-foreground">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
         {points.length} {points.length === 1 ? "punto" : "puntos"} de ayuda
       </p>
       {points.map((p) => {
-        const pending = p.items.filter((i) => i.status === "pending").length
-        const total = p.items.length
-        const delivered = p.items.filter((i) => i.status === "delivered").length
-        const allDone = total > 0 && delivered === total
+        const pending = p.items.filter((i) => i.status === "pending").length;
+        const total = p.items.length;
+        const delivered = p.items.filter(
+          (i) => i.status === "delivered",
+        ).length;
+        const allDone = total > 0 && delivered === total;
         return (
           <button
             key={p.id}
             onClick={() => onSelect(p.id)}
-            className="w-full rounded-xl border border-border bg-background p-3.5 text-left transition-colors hover:border-primary/50 hover:bg-muted/40"
-          >
+            className="w-full rounded-xl border border-border bg-background p-3.5 text-left transition-colors hover:border-primary/50 hover:bg-muted/40">
             <div className="flex items-start justify-between gap-2">
               <span className="font-medium">{p.name}</span>
               {p.distance != null && (
-                <span className="shrink-0 text-xs text-muted-foreground">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
                   {p.distance < 1
                     ? `${Math.round(p.distance * 1000)} m`
                     : `${p.distance.toFixed(1)} km`}
@@ -215,63 +234,68 @@ function PointList({
               )}
             </div>
             {p.note && (
-              <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                 {p.note}
               </p>
             )}
-            <div className="mt-2.5 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
               {allDone ? (
-                <span className="flex items-center gap-1 text-delivered">
+                <span className="inline-flex items-center gap-1 font-medium text-delivered">
                   <CircleCheckBig className="size-3.5" aria-hidden />
-                  Todo atendido
+                  Atendido completo
                 </span>
               ) : (
-                <span className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 font-medium text-pending">
                   <StatusDot status="pending" />
                   {pending} {pending === 1 ? "pendiente" : "pendientes"}
                 </span>
               )}
-              <span>·</span>
               <span>{total} ítems</span>
             </div>
           </button>
-        )
+        );
       })}
       {!hasLocation && (
         <p className="mt-1 text-center text-xs text-muted-foreground">
-          Toca un punto para ver el desglose ítem por ítem.
+          Activa tu ubicación para ordenar por cercanía.
         </p>
       )}
     </div>
-  )
+  );
 }
 
 function PointDetail({
   point,
   volunteerName,
   setVolunteerName,
+  volunteerContact,
+  setVolunteerContact,
   nameHint,
   onNeedName,
   onBack,
   onRefresh,
 }: {
-  point: PointWithItems & { distance: number | null }
-  volunteerName: string
-  setVolunteerName: (v: string) => void
-  nameHint: boolean
-  onNeedName: () => void
-  onBack: () => void
-  onRefresh: () => void
+  point: PointWithItems & { distance: number | null };
+  volunteerName: string;
+  setVolunteerName: (v: string) => void;
+  volunteerContact: string;
+  setVolunteerContact: (v: string) => void;
+  nameHint: boolean;
+  onNeedName: () => void;
+  onBack: () => void;
+  onRefresh: () => void;
 }) {
-  const total = point.items.length
-  const delivered = point.items.filter((i) => i.status === "delivered").length
-  const allDone = total > 0 && delivered === total
+  const total = point.items.length;
+  const delivered = point.items.filter((i) => i.status === "delivered").length;
+  const allDone = total > 0 && delivered === total;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="font-display text-lg font-bold leading-tight">{point.name}</h2>
+          <h2 className="font-display text-lg font-bold leading-tight">
+            {point.name}
+          </h2>
           {point.note && (
             <p className="mt-0.5 text-sm text-muted-foreground">{point.note}</p>
           )}
@@ -282,14 +306,19 @@ function PointDetail({
           )}
           {point.distance != null && (
             <p className="mt-1 text-xs text-muted-foreground">
-              A {point.distance < 1
+              A{" "}
+              {point.distance < 1
                 ? `${Math.round(point.distance * 1000)} m`
                 : `${point.distance.toFixed(1)} km`}{" "}
               de ti
             </p>
           )}
         </div>
-        <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label="Cerrar detalle">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onBack}
+          aria-label="Cerrar detalle">
           <X className="size-4" aria-hidden />
         </Button>
       </div>
@@ -300,27 +329,49 @@ function PointDetail({
         </div>
       )}
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium text-muted-foreground">
-          Tu nombre como voluntario / organización
-        </span>
-        <input
-          value={volunteerName}
-          onChange={(e) => setVolunteerName(e.target.value)}
-          placeholder="Ej: Andrés / Fundación Manos Unidas"
-          className={cn(
-            "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
-            nameHint && !volunteerName.trim()
-              ? "border-destructive"
-              : "border-input focus-visible:border-ring",
-          )}
-        />
-        {nameHint && !volunteerName.trim() && (
+      <div className="flex flex-col gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            Tu nombre como voluntario / organización{" "}
+            <span className="text-destructive">*</span>
+          </span>
+          <input
+            value={volunteerName}
+            onChange={(e) => setVolunteerName(e.target.value)}
+            placeholder="Ej: Andrés / Fundación Manos Unidas"
+            className={cn(
+              "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
+              nameHint && !volunteerName.trim()
+                ? "border-destructive"
+                : "border-input focus-visible:border-ring",
+            )}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            Número de contacto <span className="text-destructive">*</span>
+          </span>
+          <input
+            type="tel"
+            value={volunteerContact}
+            onChange={(e) => setVolunteerContact(e.target.value)}
+            placeholder="Ej: 300 123 4567"
+            className={cn(
+              "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
+              nameHint && !volunteerContact.trim()
+                ? "border-destructive"
+                : "border-input focus-visible:border-ring",
+            )}
+          />
+        </label>
+
+        {nameHint && (!volunteerName.trim() || !volunteerContact.trim()) && (
           <span className="text-xs text-destructive">
-            Escribe tu nombre para poder reservar un ítem.
+            Completa tu nombre y número de contacto para poder reservar un ítem.
           </span>
         )}
-      </label>
+      </div>
 
       <div className="flex flex-col gap-2.5">
         {point.items.map((item) => (
@@ -328,13 +379,14 @@ function PointDetail({
             key={item.id}
             item={item}
             volunteerName={volunteerName}
+            volunteerContact={volunteerContact}
             onNeedName={onNeedName}
             onRefresh={onRefresh}
           />
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function FilterChip({
@@ -343,10 +395,10 @@ function FilterChip({
   onClick,
   children,
 }: {
-  active: boolean
-  disabled?: boolean
-  onClick: () => void
-  children: React.ReactNode
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
@@ -358,11 +410,10 @@ function FilterChip({
         active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-background text-muted-foreground hover:bg-muted",
-      )}
-    >
+      )}>
       {children}
     </button>
-  )
+  );
 }
 
 export function EmptyState() {
@@ -379,5 +430,5 @@ export function EmptyState() {
         Solicitar ayuda
       </Button>
     </div>
-  )
+  );
 }

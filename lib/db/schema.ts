@@ -26,6 +26,7 @@ export const items = pgTable("items", {
   // status: 'pending' | 'reserved' | 'delivered'
   status: text("status").notNull().default("pending"),
   reservedBy: text("reserved_by"),
+  reservedByContact: text("reserved_by_contact"),
   reservedAt: timestamp("reserved_at", { withTimezone: true }),
   deliveredAt: timestamp("delivered_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

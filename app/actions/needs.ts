@@ -72,13 +72,23 @@ export async function createNeedsList(input: {
   return { ok: true, pointId: point.id }
 }
 
-export async function reserveItem(itemId: number, volunteer: string) {
-  const name = volunteer?.trim()
+export async function reserveItem(
+  itemId: number,
+  volunteerName: string,
+  volunteerContact?: string,
+) {
+  const name = volunteerName?.trim()
+  const contact = volunteerContact?.trim() || null
   if (!name) return { ok: false as const, error: "Indica tu nombre como voluntario." }
 
   const result = await db
     .update(items)
-    .set({ status: "reserved", reservedBy: name, reservedAt: new Date() })
+    .set({
+      status: "reserved",
+      reservedBy: name,
+      reservedByContact: contact,
+      reservedAt: new Date(),
+    })
     .where(and(eq(items.id, itemId), eq(items.status, "pending")))
     .returning()
 
@@ -92,7 +102,12 @@ export async function reserveItem(itemId: number, volunteer: string) {
 export async function releaseItem(itemId: number) {
   await db
     .update(items)
-    .set({ status: "pending", reservedBy: null, reservedAt: null })
+    .set({
+      status: "pending",
+      reservedBy: null,
+      reservedByContact: null,
+      reservedAt: null,
+    })
     .where(and(eq(items.id, itemId), eq(items.status, "reserved")))
   revalidatePath("/mapa")
   return { ok: true as const }
