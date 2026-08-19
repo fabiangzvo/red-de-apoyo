@@ -31,10 +31,10 @@ const HelpMap = dynamic(() => import("@/components/help-map"), {
 });
 
 const RADIUS_OPTIONS = [
+  { label: "Todo", value: null },
   { label: "2 km", value: 2 },
   { label: "5 km", value: 5 },
   { label: "10 km", value: 10 },
-  { label: "Todo", value: null },
 ];
 
 export function HelpMapView({ points }: { points: PointWithItems[] }) {
@@ -98,16 +98,17 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
   const selected = filtered.find((p) => p.id === selectedId) ?? null;
 
   return (
-    <div className="grid gap-4 lg:h-[calc(100svh-9rem)] lg:grid-cols-[380px_1fr]">
+    <div className="flex flex-col gap-4 lg:grid lg:h-[calc(100svh-9rem)] lg:grid-cols-[380px_1fr]">
       {/* Sidebar */}
-      <aside className="flex min-h-0 flex-col rounded-2xl border border-border bg-card">
+      <aside className="contents lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden lg:rounded-2xl lg:border lg:border-border lg:bg-card">
         {/* Filters */}
-        <div className="border-b border-border p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold">
+        <div className="order-1 rounded-2xl border border-border bg-card p-4 lg:order-none lg:rounded-none lg:border-0 lg:border-b lg:border-border">
+          <div className="flex items-center gap-2 text-lg font-bold">
             <SlidersHorizontal className="size-4" aria-hidden />
             Filtros
           </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <p className="font-semibold mt-4 text-sm">Categorias</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
             <FilterChip
               active={category === null}
               onClick={() => setCategory(null)}>
@@ -122,11 +123,14 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
               </FilterChip>
             ))}
           </div>
-          <div className="mt-3 flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={useMyLocation}>
+          <p className="font-semibold mt-4 text-sm flex gap-3 items-center justify-between w-full">
+            <p>Radio de búsqueda</p>
+            <Button variant="secondary" size="sm" onClick={useMyLocation}>
               <Locate className="size-4" aria-hidden />
               Mi ubicación
             </Button>
+          </p>
+          <div className="mt-2 flex items-center gap-2">
             <div className="flex flex-1 flex-wrap gap-1.5">
               {RADIUS_OPTIONS.map((r) => (
                 <FilterChip
@@ -147,7 +151,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
         </div>
 
         {/* List / detail */}
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="order-3 min-h-0 flex-1 rounded-2xl border border-border bg-card p-4 overflow-y-auto lg:order-none lg:rounded-none lg:border-0">
           {selected ? (
             <PointDetail
               point={selected}
@@ -176,7 +180,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
       </aside>
 
       {/* Map */}
-      <div className="relative h-[420px] overflow-hidden rounded-2xl border border-border lg:h-auto">
+      <div className="order-2 relative h-[380px] sm:h-[420px] overflow-hidden rounded-2xl border border-border lg:order-none lg:h-auto">
         <HelpMap
           points={filtered}
           selectedId={selectedId}
