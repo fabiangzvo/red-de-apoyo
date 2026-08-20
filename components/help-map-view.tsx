@@ -515,7 +515,10 @@ function FilterChip({
 export function EmptyState() {
   return (
     <div className="mx-auto max-w-md rounded-2xl bg-card p-8 text-center">
-      <MapPin className="mx-auto size-12 text-[#CE1126]" aria-hidden />
+      <MapPin
+        className="mx-auto size-12 text-[#CE1126] [&>circle]:fill-background [&>circle]:stroke-background [&>path]:fill-[#CE1126]"
+        aria-hidden
+      />
       <h2 className="mt-4 font-display text-xl font-bold">Aún no hay puntos</h2>
       <p className="mt-2 text-lg leading-relaxed text-muted-foreground">
         Todavía nadie ha publicado una lista de necesidades. Agradecemos tu
