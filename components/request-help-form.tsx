@@ -218,7 +218,7 @@ export function RequestHelpForm() {
             <Field label="Contacto" required>
               <input
                 value={contact}
-                onChange={(e) => setContact(e.target.value)}
+                onChange={(e) => setContact(e.target.value.replace(/\D/g, ""))}
                 placeholder="Teléfono o WhatsApp"
                 className={inputCls}
               />

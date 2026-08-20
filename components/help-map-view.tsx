@@ -447,7 +447,9 @@ function PointDetail({
           <input
             type="tel"
             value={volunteerContact}
-            onChange={(e) => setVolunteerContact(e.target.value)}
+            onChange={(e) =>
+              setVolunteerContact(e.target.value.replace(/\D/g, ""))
+            }
             placeholder="Ej: 300 123 4567"
             className={cn(
               "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
