@@ -61,6 +61,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
   const [volunteerName, setVolunteerName] = useState("");
   const [volunteerContact, setVolunteerContact] = useState("");
   const [nameHint, setNameHint] = useState(false);
+  const [requestingContact, setRequestingContact] = useState("");
 
   useEffect(() => {
     const statusParam = searchParams.get("status");
@@ -93,12 +94,15 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
     if (typeof window === "undefined") return;
 
     const userInfoStr = localStorage?.getItem("userInfo") || "{}";
+    const userRequestingStr = localStorage?.getItem("userRequesting") || "{}";
 
     if (userInfoStr) {
       const userInfo = JSON.parse(userInfoStr);
+      const userRequesting = JSON.parse(userRequestingStr);
 
       setVolunteerName(userInfo?.name ?? "");
       setVolunteerContact(userInfo?.phone ?? "");
+      setRequestingContact(userRequesting?.contact ?? "");
     }
   }, []);
 
@@ -179,7 +183,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
             ))}
           </div>
           <p className="font-semibold mt-4 text-sm flex gap-3 items-center justify-between w-full">
-            <p>Radio de búsqueda</p>
+            <label>Radio de búsqueda</label>
             <Button variant="secondary" size="sm" onClick={useMyLocation}>
               <Locate className="size-4" aria-hidden />
               Mi ubicación
@@ -222,6 +226,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
                 router.refresh();
               }}
               onRefresh={() => router.refresh()}
+              requestingContact={requestingContact}
             />
           ) : (
             <PointList
@@ -359,6 +364,7 @@ function PointDetail({
   onNeedName,
   onBack,
   onRefresh,
+  requestingContact,
 }: {
   point: PointWithItems & { distance: number | null };
   volunteerName: string;
@@ -369,6 +375,7 @@ function PointDetail({
   onNeedName: () => void;
   onBack: () => void;
   onRefresh: () => void;
+  requestingContact: string;
 }) {
   const total = point.items.length;
   const delivered = point.items.filter((i) => i.status === "delivered").length;
@@ -467,6 +474,8 @@ function PointDetail({
             volunteerContact={volunteerContact}
             onNeedName={onNeedName}
             onRefresh={onRefresh}
+            isOwner={point.contact === volunteerContact}
+            pointId={point.id}
           />
         ))}
       </div>

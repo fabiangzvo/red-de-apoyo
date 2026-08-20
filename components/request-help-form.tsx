@@ -119,6 +119,12 @@ export function RequestHelpForm() {
         detail: i.detail,
       })),
     });
+
+    localStorage.setItem(
+      "userRequesting",
+      JSON.stringify({ name, contact: contact?.trim() }),
+    );
+
     setSubmitting(false);
 
     if (!res.ok) {

@@ -1,11 +1,22 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CircleCheckBig, HandHeart, LoaderCircle, Undo2 } from "lucide-react";
+import {
+  CircleCheckBig,
+  HandHeart,
+  LoaderCircle,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { categoryLabel, type ItemStatus } from "@/lib/constants";
-import { deliverItem, releaseItem, reserveItem } from "@/app/actions/needs";
+import {
+  deliverItem,
+  releaseItem,
+  removeItem,
+  reserveItem,
+} from "@/app/actions/needs";
 import type { Item } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
@@ -15,12 +26,16 @@ export function ItemRow({
   volunteerContact,
   onNeedName,
   onRefresh,
+  isOwner = false,
+  pointId,
 }: {
   item: Item;
   volunteerName: string;
   volunteerContact: string;
   onNeedName: () => void;
   onRefresh: () => void;
+  isOwner: boolean;
+  pointId: number;
 }) {
   const status = item.status as ItemStatus;
   const [pending, startTransition] = useTransition();
@@ -51,6 +66,10 @@ export function ItemRow({
     );
   }
 
+  function handleRemoveItem() {
+    run(() => removeItem(pointId, item.id));
+  }
+
   return (
     <div
       className={cn(
@@ -58,12 +77,19 @@ export function ItemRow({
         status === "delivered" && "opacity-70",
       )}>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-              {categoryLabel(item.category)}
-            </span>
-            <StatusBadge status={status} />
+        <div className="min-w-0 w-full">
+          <div className="flex items-center gap-2 justify-between w-full">
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                {categoryLabel(item.category)}
+              </span>
+              <StatusBadge status={status} />
+            </div>
+            {isOwner && status !== "delivered" && (
+              <Button variant="ghost" size="icon-sm" onClick={handleRemoveItem}>
+                <Trash2 className="size-4" aria-hidden />
+              </Button>
+            )}
           </div>
           <p
             className={cn(
@@ -91,7 +117,7 @@ export function ItemRow({
         </div>
       </div>
 
-      {status === "pending" && (
+      {status === "pending" && !isOwner && (
         <Button
           size="sm"
           className="mt-3 w-full"
