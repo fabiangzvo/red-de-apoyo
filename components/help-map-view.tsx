@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   CircleCheckBig,
   Locate,
@@ -12,6 +13,7 @@ import {
   SlidersHorizontal,
   X,
   RefreshCcw,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ItemRow } from "@/components/item-row";
@@ -47,6 +49,7 @@ const STATUS_OPTIONS = [
 export function HelpMapView({ points }: { points: PointWithItems[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const initialStatus = searchParams.get("status");
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -105,6 +108,20 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
       setRequestingContact(userRequesting?.contact ?? "");
     }
   }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      if (session.user.name) {
+        setVolunteerName(session.user.name);
+      }
+      const contact = session.user.phone || session.user.email || "";
+      if (contact) {
+        setVolunteerContact(contact);
+      }
+    }
+  }, [session]);
+
+
 
   const filtered = useMemo(() => {
     return points
@@ -377,6 +394,7 @@ function PointDetail({
   onRefresh: () => void;
   requestingContact: string;
 }) {
+  const { data: session } = useSession();
   const total = point.items.length;
   const delivered = point.items.filter((i) => i.status === "delivered").length;
   const allDone = total > 0 && delivered === total;
@@ -421,51 +439,66 @@ function PointDetail({
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">
-            Tu nombre como voluntario / organización{" "}
-            <span className="text-destructive">*</span>
-          </span>
-          <input
-            value={volunteerName}
-            onChange={(e) => setVolunteerName(e.target.value)}
-            placeholder="Ej: Andrés / Fundación Manos Unidas"
-            className={cn(
-              "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
-              nameHint && !volunteerName.trim()
-                ? "border-destructive"
-                : "border-input focus-visible:border-ring",
-            )}
-          />
-        </label>
+      {session?.user ? (
+        <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/10 p-3 text-xs">
+          <UserCheck className="size-5 text-primary shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-foreground truncate">
+              {session.user.name || "Donante Autenticado"}
+            </p>
+            <p className="text-muted-foreground truncate text-[11px]">
+              {session.user.phone || session.user.email} • Donante registrado
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              Tu nombre como voluntario / organización{" "}
+              <span className="text-destructive">*</span>
+            </span>
+            <input
+              value={volunteerName}
+              onChange={(e) => setVolunteerName(e.target.value)}
+              placeholder="Ej: Andrés / Fundación Manos Unidas"
+              className={cn(
+                "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
+                nameHint && !volunteerName.trim()
+                  ? "border-destructive"
+                  : "border-input focus-visible:border-ring",
+              )}
+            />
+          </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">
-            Número de contacto <span className="text-destructive">*</span>
-          </span>
-          <input
-            type="tel"
-            value={volunteerContact}
-            onChange={(e) =>
-              setVolunteerContact(e.target.value.replace(/\D/g, ""))
-            }
-            placeholder="Ej: 300 123 4567"
-            className={cn(
-              "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
-              nameHint && !volunteerContact.trim()
-                ? "border-destructive"
-                : "border-input focus-visible:border-ring",
-            )}
-          />
-        </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              Número de contacto <span className="text-destructive">*</span>
+            </span>
+            <input
+              type="tel"
+              value={volunteerContact}
+              onChange={(e) =>
+                setVolunteerContact(e.target.value.replace(/\D/g, ""))
+              }
+              placeholder="Ej: 300 123 4567"
+              className={cn(
+                "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
+                nameHint && !volunteerContact.trim()
+                  ? "border-destructive"
+                  : "border-input focus-visible:border-ring",
+              )}
+            />
+          </label>
 
-        {nameHint && (!volunteerName.trim() || !volunteerContact.trim()) && (
-          <span className="text-xs text-destructive">
-            Completa tu nombre y número de contacto para poder reservar un ítem.
-          </span>
-        )}
-      </div>
+          {nameHint && (!volunteerName.trim() || !volunteerContact.trim()) && (
+            <span className="text-xs text-destructive">
+              Completa tu nombre y número de contacto para poder reservar un ítem.
+            </span>
+          )}
+        </div>
+      )}
+
 
       <div className="flex flex-col gap-2.5">
         {point.items.map((item) => (

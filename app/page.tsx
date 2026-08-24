@@ -11,12 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { getPointsWithItems } from "@/app/actions/needs";
+import { getDonorOffers } from "@/app/actions/offers";
 import { LiveStatPanel } from "@/components/live-stat-panel";
+import { DonorOffersSection } from "@/components/donor-offers-section";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const points = await getPointsWithItems();
+  const donorOffers = await getDonorOffers();
   const allItems = points.flatMap((p) => p.items);
   const stats = {
     families: allItems.filter((i) => i.status !== "delivered").length,
@@ -108,6 +111,9 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* Available Donor Offers */}
+        <DonorOffersSection offers={donorOffers} />
+
         {/* Status system */}
         <section className="border-t border-border bg-card/40">
           <div className="mx-auto max-w-6xl px-4 py-16">
@@ -141,6 +147,7 @@ export default async function HomePage() {
           </div>
         </section>
       </main>
+
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row">
