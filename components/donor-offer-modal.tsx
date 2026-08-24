@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { createDonorOffer } from "@/app/actions/offers";
+import { createDonorOffer, updateDonorOffer } from "@/app/actions/offers";
 import { CATEGORIES } from "@/lib/constants";
 import {
   X,
@@ -13,40 +13,128 @@ import {
   AlertCircle,
   Loader2,
   UserCheck,
+  Plus,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+export interface DonorOfferInitialData {
+  id: number;
+  category: string;
+  title: string;
+  detail?: string | null;
+  locationName?: string | null;
+}
 
 interface DonorOfferModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialData?: DonorOfferInitialData | null;
+}
+
+type DraftOfferItem = {
+  id: string;
+  category: string;
+  product: string;
+  detail: string;
+};
+
+function newDraftItem(): DraftOfferItem {
+  return {
+    id: crypto.randomUUID(),
+    category: "alimentos",
+    product: "",
+    detail: "",
+  };
+}
+
+const inputCls =
+  "w-full rounded-xl border border-input bg-background px-3.5 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary";
+
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-muted-foreground">
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </span>
+      {children}
+    </label>
+  );
 }
 
 export function DonorOfferModal({
   isOpen,
   onClose,
   onSuccess,
+  initialData,
 }: DonorOfferModalProps) {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const [category, setCategory] = useState("alimentos");
-  const [title, setTitle] = useState("");
-  const [detail, setDetail] = useState("");
+  const isEditing = Boolean(initialData);
+
+  const [items, setItems] = useState<DraftOfferItem[]>([newDraftItem()]);
   const [locationName, setLocationName] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setItems([
+          {
+            id: String(initialData.id),
+            category: initialData.category || "alimentos",
+            product: initialData.title || "",
+            detail: initialData.detail || "",
+          },
+        ]);
+        setLocationName(initialData.locationName || "");
+      } else {
+        setItems([newDraftItem()]);
+        setLocationName("");
+      }
+      setError(null);
+      setSuccess(false);
+    }
+  }, [isOpen, initialData]);
+
   if (!isOpen) return null;
 
+  const updateItem = (
+    id: string,
+    patch: Partial<Omit<DraftOfferItem, "id">>,
+  ) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  };
+
+  const addItem = () => {
+    setItems((prev) => [...prev, newDraftItem()]);
+  };
+
+  const removeItem = (id: string) => {
+    setItems((prev) =>
+      prev.length === 1 ? prev : prev.filter((i) => i.id !== id),
+    );
+  };
+
   const resetForm = () => {
-    setTitle("");
-    setDetail("");
+    setItems([newDraftItem()]);
     setLocationName("");
-    setCategory("alimentos");
     setError(null);
     setSuccess(false);
   };
@@ -55,31 +143,61 @@ export function DonorOfferModal({
     e.preventDefault();
     setError(null);
 
-    if (!title.trim()) {
-      setError("Por favor ingresa un título para la ayuda disponible.");
+    const validItems = items.filter((i) => i.product.trim().length > 0);
+
+    if (validItems.length === 0) {
+      setError("Por favor ingresa al menos un producto o ayuda disponible.");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const res = await createDonorOffer({
-        category,
-        title: title.trim(),
-        detail: detail.trim() || undefined,
-        locationName: locationName.trim() || undefined,
-      });
+      if (isEditing && initialData) {
+        const item = validItems[0];
+        const res = await updateDonorOffer(initialData.id, {
+          category: item.category,
+          title: item.product.trim(),
+          detail: item.detail.trim() || undefined,
+          locationName: locationName.trim() || undefined,
+        });
 
-      if (!res.ok) {
-        setError(res.error || "Ocurrió un error al guardar la donación.");
+        if (!res.ok) {
+          setError(res.error || "No se pudo actualizar la donación.");
+        } else {
+          setSuccess(true);
+          setTimeout(() => {
+            resetForm();
+            onClose();
+            if (onSuccess) onSuccess();
+            router.refresh();
+          }, 1000);
+        }
       } else {
-        setSuccess(true);
-        setTimeout(() => {
-          resetForm();
-          onClose();
-          if (onSuccess) onSuccess();
-          router.refresh();
-        }, 1200);
+        const results = await Promise.all(
+          validItems.map((item) =>
+            createDonorOffer({
+              category: item.category,
+              title: item.product.trim(),
+              detail: item.detail.trim() || undefined,
+              locationName: locationName.trim() || undefined,
+            }),
+          ),
+        );
+
+        const failed = results.find((res) => !res.ok);
+
+        if (failed) {
+          setError(failed.error || "Ocurrió un error al guardar la donación.");
+        } else {
+          setSuccess(true);
+          setTimeout(() => {
+            resetForm();
+            onClose();
+            if (onSuccess) onSuccess();
+            router.refresh();
+          }, 1200);
+        }
       }
     } catch (err) {
       setError("Error inesperado en el servidor.");
@@ -87,6 +205,8 @@ export function DonorOfferModal({
       setIsLoading(false);
     }
   };
+
+  const validCount = items.filter((i) => i.product.trim().length > 0).length;
 
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
@@ -100,33 +220,39 @@ export function DonorOfferModal({
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-background shadow-2xl transition-all z-10 my-auto">
+      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-background shadow-2xl transition-all z-10 my-auto max-h-[90vh] flex flex-col">
         {/* Close Button */}
-        <button
+        <Button
+          variant="tertiary"
           onClick={() => {
             resetForm();
             onClose();
           }}
-          className="absolute right-4 top-4 z-20 flex size-8 items-center justify-center rounded-full bg-muted/80 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          aria-label="Cerrar modal"
-        >
+          className="absolute right-4 top-4 z-20 flex size-8 items-center justify-center rounded-full transition"
+          aria-label="Cerrar modal">
           <X className="size-4" />
-        </button>
+        </Button>
 
         {/* Modal Header */}
-        <div className="relative bg-gradient-to-b from-emerald-500/10 via-emerald-500/5 to-transparent px-6 pt-6 pb-4 text-center">
-          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm ring-1 ring-emerald-500/20">
-            <Gift className="size-6" />
+        <div className="relative bg-gradient-to-b from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-4 text-center shrink-0">
+          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20">
+            {isEditing ? (
+              <Pencil className="size-6" />
+            ) : (
+              <Gift className="size-6" />
+            )}
           </div>
           <h2 className="text-xl font-bold font-display tracking-tight text-foreground">
-            Ofrecer Ayuda Disponible
+            {isEditing ? "Editar Ayuda Disponible" : "Ofrecer Ayuda Disponible"}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Registra los elementos o recursos que tienes disponibles para donar.
+            {isEditing
+              ? "Modifica los detalles del elemento o recurso que tienes para donar."
+              : "Registra uno o varios elementos que tienes disponibles para donar."}
           </p>
         </div>
 
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-6 overflow-y-auto grow">
           {error && (
             <div className="mb-4 flex items-start gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive">
               <AlertCircle className="size-4 shrink-0 mt-0.5" />
@@ -135,19 +261,24 @@ export function DonorOfferModal({
           )}
 
           {success && (
-            <div className="mb-4 flex items-start gap-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-600 dark:text-emerald-400">
+            <div className="mb-4 flex items-start gap-2.5 rounded-xl bg-primary/10 border border-primary/20 p-3 text-xs text-primary">
               <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
-              <span>¡Ayuda registrada con éxito! La oferta ya está disponible.</span>
+              <span>
+                {isEditing
+                  ? "¡Donación actualizada con éxito!"
+                  : `¡${validCount > 1 ? `${validCount} ofertas registradas` : "Ayuda registrada"} con éxito!`}
+              </span>
             </div>
           )}
 
           {/* Donor Session Info Badge */}
           {session?.user && (
-            <div className="mb-4 flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs">
-              <UserCheck className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <div className="mb-4 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs">
+              <UserCheck className="size-4 text-primary shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-foreground truncate">
-                  Publicando como: {session.user.name}
+                  {isEditing ? "Editando como:" : "Publicando como:"}{" "}
+                  {session.user.name}
                 </p>
                 <p className="text-muted-foreground truncate text-[11px]">
                   Contacto: {session.user.phone || session.user.email}
@@ -157,63 +288,99 @@ export function DonorOfferModal({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Category selection */}
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">
-                Categoría de la ayuda <span className="text-destructive">*</span>
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setCategory(c.value)}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                      category === c.value
-                        ? "border-emerald-500 bg-emerald-500 text-white font-semibold shadow-sm"
-                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+            {/* Needs / Offers list */}
+            <div className="flex flex-col gap-3">
+              {items.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-border bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      Ítem {idx + 1}
+                    </span>
+                    {!isEditing && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        type="button"
+                        onClick={() => removeItem(item.id)}
+                        disabled={items.length === 1}
+                        aria-label={`Eliminar ítem ${idx + 1}`}>
+                        <Trash2 className="size-4" aria-hidden />
+                      </Button>
                     )}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  </div>
 
-            {/* Title / Item name */}
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">
-                Producto / Ayuda disponible <span className="text-destructive">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ej. 15 Mercados familiares / 5 Cobijas térmicas"
-                className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+                  <div className="grid gap-3">
+                    <div>
+                      <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                        Categoría <span className="text-destructive">*</span>
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {CATEGORIES.map((c) => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() =>
+                              updateItem(item.id, { category: c.value })
+                            }
+                            className={cn(
+                              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                              item.category === c.value
+                                ? "border-primary bg-primary text-white font-semibold shadow-sm"
+                                : "border-border bg-background text-muted-foreground hover:bg-muted",
+                            )}>
+                            {c.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-            {/* Detail / Description */}
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">
-                Detalles / Cantidad / Especificaciones <span className="text-muted-foreground">(Opcional)</span>
-              </label>
-              <textarea
-                rows={2}
-                value={detail}
-                onChange={(e) => setDetail(e.target.value)}
-                placeholder="Ej. Alimentos no perecederos en buen estado. Listos para entrega en caja."
-                className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Producto / Ayuda disponible" required>
+                        <input
+                          type="text"
+                          value={item.product}
+                          onChange={(e) =>
+                            updateItem(item.id, { product: e.target.value })
+                          }
+                          placeholder="Ej. 15 Mercados / 5 Cobijas"
+                          className={inputCls}
+                        />
+                      </Field>
+                      <Field label="Cantidad / detalle (Opcional)">
+                        <input
+                          type="text"
+                          value={item.detail}
+                          onChange={(e) =>
+                            updateItem(item.id, { detail: e.target.value })
+                          }
+                          placeholder="Ej. Listo para entregar"
+                          className={inputCls}
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {!isEditing && (
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={addItem}
+                  className="border-dashed w-full">
+                  <Plus className="size-4" aria-hidden />
+                  Agregar otra ayuda
+                </Button>
+              )}
             </div>
 
             {/* Location */}
             <div>
               <label className="mb-1.5 block text-xs font-medium text-foreground">
-                Ubicación o Punto de entrega <span className="text-muted-foreground">(Opcional)</span>
+                Ubicación o Punto de entrega{" "}
+                <span className="text-muted-foreground">(Opcional)</span>
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -222,7 +389,7 @@ export function DonorOfferModal({
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
                   placeholder="Ej. Bogotá - Chapinero / Medellín - Centro"
-                  className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-xl border border-input bg-background pl-9 pr-3.5 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -230,13 +397,16 @@ export function DonorOfferModal({
             <Button
               type="submit"
               disabled={isLoading || success}
-              className="w-full py-2.5 font-semibold text-sm shadow-md bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
+              className="w-full px-3">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Registrando ayuda...
+                  {isEditing ? "Guardando cambios..." : "Registrando ayuda..."}
                 </>
+              ) : isEditing ? (
+                "Guardar Cambios"
+              ) : validCount > 1 ? (
+                `Publicar ${validCount} Ayudas Disponibles`
               ) : (
                 "Publicar Ayuda Disponible"
               )}

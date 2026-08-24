@@ -75,7 +75,7 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
             ) : session?.user ? (
               <>
                 <Button
-                  variant="outline"
+                  variant="tertiary"
                   size="sm"
                   render={<Link href="/mapa" />}
                   className="py-4 max-lg:hidden">
@@ -84,20 +84,11 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
                 </Button>
 
                 <Button
-                  variant="tertiary"
                   size="sm"
                   render={<Link href="/solicitar" />}
                   className="py-4 max-lg:hidden">
                   <PlusCircle className="size-4" aria-hidden />
                   Solicitar ayuda
-                </Button>
-
-                <Button
-                  size="sm"
-                  onClick={() => setDonorOfferModalOpen(true)}
-                  className="py-4 font-medium max-lg:hidden">
-                  <Gift className="size-4" aria-hidden />
-                  <span>Ofrecer donación</span>
                 </Button>
 
                 <div className="relative">
@@ -154,6 +145,15 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
                           Ofrecer donación
                         </Button>
 
+                        <Button
+                          variant="ghost"
+                          render={<Link href="/mis-donaciones" />}
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex w-full items-center justify-start gap-2 px-2.5 py-2 text-xs transition font-medium rounded-sm">
+                          <Gift className="size-4 text-primary" aria-hidden />
+                          Mis donaciones
+                        </Button>
+
                         <button
                           type="button"
                           onClick={handleLogout}
@@ -171,7 +171,7 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
                 {/* Desktop controls for logged out user */}
                 <div className="hidden lg:flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="tertiary"
                     size="sm"
                     render={<Link href="/mapa" />}
                     className="py-4">
@@ -180,7 +180,6 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
                   </Button>
 
                   <Button
-                    variant="tertiary"
                     size="sm"
                     render={<Link href="/solicitar" />}
                     className="py-4">
@@ -189,6 +188,7 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
                   </Button>
 
                   <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => openAuthModal("login")}
                     className="py-4">

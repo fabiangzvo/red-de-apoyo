@@ -1,4 +1,5 @@
 import {
+  boolean,
   doublePrecision,
   integer,
   pgTable,
@@ -19,12 +20,14 @@ export const points = pgTable("points", {
 
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
-  pointId: integer("point_id").notNull(),
+  pointId: integer("point_id"),
   category: text("category").notNull(),
   product: text("product").notNull(),
   detail: text("detail"),
-  // status: 'pending' | 'reserved' | 'delivered'
+  // status: 'pending' | 'reserved' | 'delivered' | 'available'
   status: text("status").notNull().default("pending"),
+  isDonation: boolean("is_donation").notNull().default(false),
+  userId: integer("user_id"),
   reservedBy: text("reserved_by"),
   reservedByContact: text("reserved_by_contact"),
   reservedAt: timestamp("reserved_at", { withTimezone: true }),
