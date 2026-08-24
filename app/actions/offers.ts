@@ -12,6 +12,7 @@ export async function createDonorOffer(data: {
   title: string;
   detail?: string;
   locationName?: string;
+  quantity?: number;
   lat?: number;
   lng?: number;
 }) {
@@ -21,26 +22,33 @@ export async function createDonorOffer(data: {
     if (!session?.user) {
       return {
         ok: false,
-        error: "Debes iniciar sesión como donante para registrar tus ayudas disponibles.",
+        error:
+          "Debes iniciar sesión como donante para registrar tus ayudas disponibles.",
       };
     }
 
     if (!data.category?.trim() || !data.title?.trim()) {
       return {
         ok: false,
-        error: "Por favor selecciona una categoría e ingresa el título de la ayuda.",
+        error:
+          "Por favor selecciona una categoría e ingresa el título de la ayuda.",
       };
     }
 
     const userId = session.user.id ? parseInt(session.user.id, 10) : null;
-    const contact = session.user.phone || session.user.email || "No especificado";
+    const contact =
+      session.user.phone || session.user.email || "No especificado";
 
     const detailText = [
       data.detail?.trim(),
-      data.locationName?.trim() ? `Ubicación: ${data.locationName.trim()}` : null,
+      data.locationName?.trim()
+        ? `Ubicación: ${data.locationName.trim()}`
+        : null,
     ]
       .filter(Boolean)
       .join(" — ");
+
+    const totalQty = data.quantity && data.quantity > 0 ? data.quantity : 1;
 
     // Insert into items table as a donation item
     const [newItem] = await db
@@ -52,6 +60,8 @@ export async function createDonorOffer(data: {
         status: "available",
         isDonation: true,
         userId: userId,
+        quantity: totalQty,
+        quantityReserved: 0,
         reservedBy: session.user.name || "Donante",
         reservedByContact: contact,
       })
@@ -106,6 +116,7 @@ export async function getDonorOffers() {
         lng: null,
         status: item.status,
         createdAt: item.createdAt,
+        quantity: item.quantity,
       }));
     }
 
@@ -149,6 +160,8 @@ export async function getUserOffers() {
       locationName: null,
       status: item.status,
       createdAt: item.createdAt,
+      quantity: item.quantity,
+      quantityReserved: item.quantityReserved,
     }));
 
     const mappedOffers = legacyOffers.map((offer) => ({
@@ -162,6 +175,8 @@ export async function getUserOffers() {
       locationName: offer.locationName,
       status: offer.status,
       createdAt: offer.createdAt,
+      quantity: offer.quantity,
+      quantityReserved: 0,
     }));
 
     return mappedItems.length > 0 ? mappedItems : mappedOffers;
@@ -195,6 +210,7 @@ export async function updateDonorOffer(
   data: {
     category: string;
     title: string;
+    quantity?: number;
     detail?: string;
     locationName?: string;
   },
@@ -208,22 +224,28 @@ export async function updateDonorOffer(
     if (!data.category?.trim() || !data.title?.trim()) {
       return {
         ok: false,
-        error: "Por favor selecciona una categoría e ingresa el título de la ayuda.",
+        error:
+          "Por favor selecciona una categoría e ingresa el título de la ayuda.",
       };
     }
 
     const detailText = [
       data.detail?.trim(),
-      data.locationName?.trim() ? `Ubicación: ${data.locationName.trim()}` : null,
+      data.locationName?.trim()
+        ? `Ubicación: ${data.locationName.trim()}`
+        : null,
     ]
       .filter(Boolean)
       .join(" — ");
+
+    const newQty = data.quantity && data.quantity > 0 ? data.quantity : 1;
 
     await db
       .update(items)
       .set({
         category: data.category.trim(),
         product: data.title.trim(),
+        quantity: newQty,
         detail: detailText || null,
       })
       .where(eq(items.id, offerId));
@@ -233,6 +255,7 @@ export async function updateDonorOffer(
       .set({
         category: data.category.trim(),
         title: data.title.trim(),
+        quantity: newQty,
         detail: data.detail?.trim() || null,
         locationName: data.locationName?.trim() || null,
       })
@@ -241,6 +264,7 @@ export async function updateDonorOffer(
     revalidatePath("/");
     revalidatePath("/mapa");
     revalidatePath("/mis-donaciones");
+    revalidatePath("/mis-donaciones");
 
     return { ok: true };
   } catch (error) {
@@ -248,5 +272,3 @@ export async function updateDonorOffer(
     return { ok: false, error: "Error al actualizar la donación." };
   }
 }
-
-

@@ -36,6 +36,7 @@ function newDraft(): DraftItem {
     id: crypto.randomUUID(),
     category: "alimentos",
     product: "",
+    quantity: 1,
     detail: "",
   };
 }
@@ -116,6 +117,7 @@ export function RequestHelpForm() {
       items: validItems.map((i) => ({
         category: i.category,
         product: i.product,
+        quantity: i.quantity,
         detail: i.detail,
       })),
     });
@@ -279,24 +281,43 @@ export function RequestHelpForm() {
                     </button>
                   ))}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Elemento / producto">
-                    <input
-                      value={item.product}
-                      onChange={(e) =>
-                        updateItem(item.id, { product: e.target.value })
-                      }
-                      placeholder="Ej: Tejas de zinc"
-                      className={inputCls}
-                    />
-                  </Field>
-                  <Field label="Cantidad / detalle">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="sm:col-span-2">
+                    <Field label="Elemento / producto" required>
+                      <input
+                        value={item.product}
+                        onChange={(e) =>
+                          updateItem(item.id, { product: e.target.value })
+                        }
+                        placeholder="Ej: Tejas de zinc"
+                        className={inputCls}
+                      />
+                    </Field>
+                  </div>
+                  <div>
+                    <Field label="Cantidad" required>
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.quantity ?? 1}
+                        onChange={(e) =>
+                          updateItem(item.id, {
+                            quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
+                          })
+                        }
+                        className={inputCls}
+                      />
+                    </Field>
+                  </div>
+                </div>
+                <div>
+                  <Field label="Detalle (opcional)">
                     <input
                       value={item.detail ?? ""}
                       onChange={(e) =>
                         updateItem(item.id, { detail: e.target.value })
                       }
-                      placeholder="Ej: 5 unidades"
+                      placeholder="Ej: Medida 2x1 mts, buen estado"
                       className={inputCls}
                     />
                   </Field>

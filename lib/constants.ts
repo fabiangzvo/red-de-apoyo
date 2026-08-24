@@ -18,4 +18,4 @@ export const DEFAULT_CENTER: [number, number] = [
 ];
 export const DEFAULT_ZOOM = 15;
 
-export type ItemStatus = "pending" | "reserved" | "delivered";
+export type ItemStatus = "pending" | "reserved" | "delivered" | "available";

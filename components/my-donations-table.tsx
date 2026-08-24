@@ -48,6 +48,8 @@ export interface OfferItem {
   category: string;
   title: string;
   detail: string | null;
+  quantity: number | null;
+  quantityReserved: number | null;
   locationName: string | null;
   status: string;
   createdAt: Date | string;
@@ -243,6 +245,9 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
                       )}
                     </div>
                   </th>
+                  <th className="py-3.5 px-4 text-center">Stock Total</th>
+                  <th className="py-3.5 px-4 text-center">Reservado</th>
+                  <th className="py-3.5 px-4 text-center">Disponible</th>
                   <th className="py-3.5 px-4">Detalles / Nota</th>
                   <th
                     onClick={() => toggleSort("status")}
@@ -282,7 +287,7 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
               <tbody className="divide-y divide-border">
                 {filteredAndSortedOffers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center">
+                    <td colSpan={8} className="py-12 text-center">
                       <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/5 mb-3">
                         <Package className="size-6" />
                       </div>
@@ -315,6 +320,10 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
                       year: "numeric",
                     });
 
+                    const total = item.quantity ?? 1;
+                    const reserved = item.quantityReserved ?? 0;
+                    const available = Math.max(0, total - reserved);
+
                     return (
                       <tr
                         key={item.id}
@@ -326,6 +335,15 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
                           <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                             {categoryLabel(item.category)}
                           </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center text-xs font-semibold text-foreground">
+                          {total}
+                        </td>
+                        <td className="py-3.5 px-4 text-center text-xs font-semibold text-amber-600 dark:text-amber-400">
+                          {reserved}
+                        </td>
+                        <td className="py-3.5 px-4 text-center text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          {available}
                         </td>
                         <td className="py-3.5 px-4 text-xs text-muted-foreground max-w-xs truncate">
                           {item.detail || "—"}

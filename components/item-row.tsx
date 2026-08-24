@@ -15,7 +15,7 @@ import {
   deliverItem,
   releaseItem,
   removeItem,
-  reserveItem,
+  reserveItemQuantity,
 } from "@/app/actions/needs";
 import type { Item } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
@@ -41,6 +41,17 @@ export function ItemRow({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const availableQty = Math.max(
+    0,
+    (item.quantity || 1) - (item.quantityReserved || 0),
+  );
+  const reservedQty = item.quantityReserved || 0;
+  const totalQty = item.quantity || 1;
+
+  const [requestQty, setRequestQty] = useState<number>(
+    availableQty > 0 ? 1 : 0,
+  );
+
   const isCurrentUserReserved = item.reservedByContact === volunteerContact;
 
   function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
@@ -52,7 +63,7 @@ export function ItemRow({
     });
   }
 
-  function handleReserve() {
+  function handleReserveQuantity(qty: number) {
     if (!volunteerName.trim() || !volunteerContact.trim()) {
       onNeedName();
       return;
@@ -62,7 +73,12 @@ export function ItemRow({
       JSON.stringify({ name: volunteerName, phone: volunteerContact }),
     );
     run(() =>
-      reserveItem(item.id, volunteerName.trim(), volunteerContact.trim()),
+      reserveItemQuantity(
+        item.id,
+        volunteerName.trim(),
+        volunteerContact.trim(),
+        qty,
+      ),
     );
   }
 
@@ -101,9 +117,29 @@ export function ItemRow({
           {item.detail && (
             <p className="text-sm text-muted-foreground">{item.detail}</p>
           )}
-          {item.reservedBy && status !== "pending" && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {status === "delivered" ? "Entregado por " : "Reservado por "}
+
+          {/* Quantities Stock Info */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+              Disponibles: {availableQty}
+            </span>
+            <span className="inline-flex items-center gap-1 font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
+              Reservadas: {reservedQty}
+            </span>
+            <span className="inline-flex items-center gap-1 text-muted-foreground text-[11px]">
+              Total Stock: {totalQty}
+            </span>
+          </div>
+
+          {item.reservedBy && (status === "reserved" || status === "delivered") && (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {status === "delivered"
+                ? item.isDonation
+                  ? "Entregado a "
+                  : "Entregado por "
+                : item.isDonation
+                  ? "Solicitado por "
+                  : "Reservado por "}
               <span className="font-medium text-foreground">
                 {item.reservedBy}
               </span>
@@ -117,19 +153,41 @@ export function ItemRow({
         </div>
       </div>
 
-      {status === "pending" && !isOwner && (
-        <Button
-          size="sm"
-          className="mt-3 w-full"
-          onClick={handleReserve}
-          disabled={pending}>
-          {pending ? (
-            <LoaderCircle className="size-4 animate-spin" aria-hidden />
-          ) : (
-            <HandHeart className="size-4" aria-hidden />
-          )}
-          Me encargo de este ítem
-        </Button>
+      {(status === "pending" || status === "available") && availableQty > 0 && !isOwner && (
+        <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border/80 bg-muted/30 p-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs font-medium text-muted-foreground">
+              Cantidad a solicitar (Máx: {availableQty})
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={availableQty}
+              value={requestQty}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (isNaN(val)) setRequestQty(1);
+                else setRequestQty(Math.min(availableQty, Math.max(1, val)));
+              }}
+              className="w-20 rounded-md border border-input bg-background px-2.5 py-1 text-right text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={() => handleReserveQuantity(requestQty)}
+            disabled={pending || availableQty <= 0}>
+            {pending ? (
+              <LoaderCircle className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <HandHeart className="size-4" aria-hidden />
+            )}
+            {item.isDonation || status === "available"
+              ? `Solicitar ${requestQty} ${requestQty === 1 ? "unidad" : "unidades"}`
+              : `Me encargo de ${requestQty} ${requestQty === 1 ? "unidad" : "unidades"}`}
+          </Button>
+        </div>
       )}
 
       {status === "reserved" && isCurrentUserReserved && (
@@ -143,7 +201,7 @@ export function ItemRow({
             ) : (
               <CircleCheckBig className="size-4" aria-hidden />
             )}
-            Marcar entregado
+            {item.isDonation ? "Marcar recibido" : "Marcar entregado"}
           </Button>
           <Button
             size="sm"
@@ -151,14 +209,16 @@ export function ItemRow({
             onClick={() => run(() => releaseItem(item.id))}
             disabled={pending}>
             <Undo2 className="size-4" aria-hidden />
-            Liberar
+            {item.isDonation ? "Cancelar solicitud" : "Liberar"}
           </Button>
         </div>
       )}
 
       {status === "reserved" && isCurrentUserReserved && (
         <p className="mt-2 text-xs text-reserved-foreground">
-          Ítem reservado. Tienes 6 horas para realizar la entrega.
+          {item.isDonation
+            ? "Has solicitado este producto. El donante se pondrá en contacto contigo."
+            : "Ítem reservado. Tienes 6 horas para realizar la entrega."}
         </p>
       )}
 

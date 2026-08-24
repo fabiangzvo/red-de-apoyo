@@ -41,6 +41,7 @@ const RADIUS_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { label: "Todos", value: null },
+  { label: "Disponibles", value: "available" },
   { label: "Pendientes", value: "pending" },
   { label: "Reservados", value: "reserved" },
   { label: "Entregados", value: "delivered" },
@@ -65,6 +66,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
   const [volunteerContact, setVolunteerContact] = useState("");
   const [nameHint, setNameHint] = useState(false);
   const [requestingContact, setRequestingContact] = useState("");
+  const [isDonation, setIsDonation] = useState<boolean>(false);
 
   useEffect(() => {
     const statusParam = searchParams.get("status");
@@ -121,8 +123,6 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
     }
   }, [session]);
 
-
-
   const filtered = useMemo(() => {
     return points
       .map((p) => {
@@ -132,6 +132,12 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
         return { ...p, distance };
       })
       .filter((p) => {
+        // Type filter: keep points that have at least one item of type
+        if (
+          isDonation !== null &&
+          !p.items.some((i) => Boolean(i.isDonation) === isDonation)
+        )
+          return false;
         // Category filter: keep points that have at least one item in category
         if (category && !p.items.some((i) => i.category === category))
           return false;
@@ -158,7 +164,7 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
           return a.distance - b.distance;
         return 0;
       });
-  }, [points, category, statusFilter, radiusKm, userLocation]);
+  }, [points, category, statusFilter, radiusKm, userLocation, isDonation]);
 
   const selected = filtered.find((p) => p.id === selectedId) ?? null;
 
@@ -171,6 +177,20 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
           <div className="flex items-center gap-2 text-lg font-bold">
             <SlidersHorizontal className="size-4" aria-hidden />
             Filtros
+          </div>
+          <p className="font-semibold mt-4 text-sm">Me interesa</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {[
+              { label: "Apoyar", value: false },
+              { label: "Solicitar Ayuda", value: true },
+            ].map((c) => (
+              <FilterChip
+                key={c.value.toString()}
+                active={isDonation === c.value}
+                onClick={() => setIsDonation(c.value)}>
+                {c.label}
+              </FilterChip>
+            ))}
           </div>
           <p className="font-semibold mt-4 text-sm">Categorias</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -336,7 +356,11 @@ function PointList({
               </p>
             )}
             <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-              {allDone ? (
+              {p.id < 0 ? (
+                <div className="flex items-center font-medium text-foreground">
+                  <span>Ofrecido por: {p.contact || "Donante registrado"}</span>
+                </div>
+              ) : allDone ? (
                 <span className="inline-flex items-center gap-1 font-medium text-delivered">
                   <CircleCheckBig className="size-3.5" aria-hidden />
                   Atendido completo
@@ -357,7 +381,11 @@ function PointList({
                   )}
                 </div>
               )}
-              <span>{total} ítems</span>
+              <span>
+                {p.id < 0
+                  ? `${Math.max(0, (p.items[0]?.quantity || 1) - (p.items[0]?.quantityReserved || 0))} disp. / ${p.items[0]?.quantity || 1} total`
+                  : `${total} ítems`}
+              </span>
             </div>
           </button>
         );
@@ -455,13 +483,19 @@ function PointDetail({
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted-foreground">
-              Tu nombre como voluntario / organización{" "}
+              {point.id < 0
+                ? "Tu nombre (Solicitante / Damnificado)"
+                : "Tu nombre como voluntario / organización"}{" "}
               <span className="text-destructive">*</span>
             </span>
             <input
               value={volunteerName}
               onChange={(e) => setVolunteerName(e.target.value)}
-              placeholder="Ej: Andrés / Fundación Manos Unidas"
+              placeholder={
+                point.id < 0
+                  ? "Ej: María Rodríguez / Familia Pérez"
+                  : "Ej: Andrés / Fundación Manos Unidas"
+              }
               className={cn(
                 "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/30",
                 nameHint && !volunteerName.trim()
@@ -473,7 +507,8 @@ function PointDetail({
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted-foreground">
-              Número de contacto <span className="text-destructive">*</span>
+              Número de contacto (Teléfono / WhatsApp){" "}
+              <span className="text-destructive">*</span>
             </span>
             <input
               type="tel"
@@ -493,26 +528,37 @@ function PointDetail({
 
           {nameHint && (!volunteerName.trim() || !volunteerContact.trim()) && (
             <span className="text-xs text-destructive">
-              Completa tu nombre y número de contacto para poder reservar un ítem.
+              {point.id < 0
+                ? "Completa tu nombre y teléfono para que el donante pueda comunicarse contigo."
+                : "Completa tu nombre y número de contacto para poder reservar un ítem."}
             </span>
           )}
         </div>
       )}
 
-
       <div className="flex flex-col gap-2.5">
-        {point.items.map((item) => (
-          <ItemRow
-            key={item.id}
-            item={item}
-            volunteerName={volunteerName}
-            volunteerContact={volunteerContact}
-            onNeedName={onNeedName}
-            onRefresh={onRefresh}
-            isOwner={point.contact === volunteerContact}
-            pointId={point.id}
-          />
-        ))}
+        {point.items.map((item) => {
+          const currentUserId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+          const isItemOwner =
+            point.contact === volunteerContact ||
+            item.reservedByContact === volunteerContact ||
+            (Boolean(session?.user) &&
+              (item.userId === currentUserId ||
+                point.contact === session?.user?.name));
+
+          return (
+            <ItemRow
+              key={item.id}
+              item={item}
+              volunteerName={volunteerName}
+              volunteerContact={volunteerContact}
+              onNeedName={onNeedName}
+              onRefresh={onRefresh}
+              isOwner={isItemOwner}
+              pointId={point.id}
+            />
+          );
+        })}
       </div>
     </div>
   );

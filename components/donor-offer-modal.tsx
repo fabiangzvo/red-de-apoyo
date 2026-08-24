@@ -24,6 +24,7 @@ export interface DonorOfferInitialData {
   id: number;
   category: string;
   title: string;
+  quantity?: number | null;
   detail?: string | null;
   locationName?: string | null;
 }
@@ -39,6 +40,7 @@ type DraftOfferItem = {
   id: string;
   category: string;
   product: string;
+  quantity: number;
   detail: string;
 };
 
@@ -47,6 +49,7 @@ function newDraftItem(): DraftOfferItem {
     id: crypto.randomUUID(),
     category: "alimentos",
     product: "",
+    quantity: 1,
     detail: "",
   };
 }
@@ -100,6 +103,7 @@ export function DonorOfferModal({
             id: String(initialData.id),
             category: initialData.category || "alimentos",
             product: initialData.title || "",
+            quantity: initialData.quantity && initialData.quantity > 0 ? initialData.quantity : 1,
             detail: initialData.detail || "",
           },
         ]);
@@ -158,6 +162,7 @@ export function DonorOfferModal({
         const res = await updateDonorOffer(initialData.id, {
           category: item.category,
           title: item.product.trim(),
+          quantity: item.quantity,
           detail: item.detail.trim() || undefined,
           locationName: locationName.trim() || undefined,
         });
@@ -179,6 +184,7 @@ export function DonorOfferModal({
             createDonorOffer({
               category: item.category,
               title: item.product.trim(),
+              quantity: item.quantity,
               detail: item.detail.trim() || undefined,
               locationName: locationName.trim() || undefined,
             }),
@@ -336,19 +342,38 @@ export function DonorOfferModal({
                       </div>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Producto / Ayuda disponible" required>
-                        <input
-                          type="text"
-                          value={item.product}
-                          onChange={(e) =>
-                            updateItem(item.id, { product: e.target.value })
-                          }
-                          placeholder="Ej. 15 Mercados / 5 Cobijas"
-                          className={inputCls}
-                        />
-                      </Field>
-                      <Field label="Cantidad / detalle (Opcional)">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="sm:col-span-2">
+                        <Field label="Producto / Ayuda disponible" required>
+                          <input
+                            type="text"
+                            value={item.product}
+                            onChange={(e) =>
+                              updateItem(item.id, { product: e.target.value })
+                            }
+                            placeholder="Ej. Mercados, Cobijas, Kits de aseo"
+                            className={inputCls}
+                          />
+                        </Field>
+                      </div>
+                      <div>
+                        <Field label="Cantidad (Stock)" required>
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateItem(item.id, {
+                                quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
+                              })
+                            }
+                            className={inputCls}
+                          />
+                        </Field>
+                      </div>
+                    </div>
+                    <div>
+                      <Field label="Detalle adicional (Opcional)">
                         <input
                           type="text"
                           value={item.detail}

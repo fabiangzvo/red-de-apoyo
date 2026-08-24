@@ -6,6 +6,11 @@ const CONFIG: Record<
   ItemStatus,
   { label: string; className: string; Icon: typeof Clock }
 > = {
+  available: {
+    label: "Disponible",
+    className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+    Icon: CircleCheckBig,
+  },
   pending: {
     label: "Pendiente",
     className: "bg-pending/15 text-pending border-pending/30",
@@ -50,7 +55,9 @@ export function StatusDot({ status }: { status: ItemStatus }) {
       ? "bg-delivered"
       : status === "reserved"
         ? "bg-reserved"
-        : "bg-pending";
+        : status === "available"
+          ? "bg-emerald-500"
+          : "bg-pending";
   return (
     <span
       className={cn("inline-block size-2 rounded-full", color)}
