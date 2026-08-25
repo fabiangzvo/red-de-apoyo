@@ -50,8 +50,8 @@ export function ItemRow({
   const reservedQty = item.quantityReserved || 0;
   const totalQty = item.quantity || 1;
 
-  const [requestQty, setRequestQty] = useState<number>(
-    availableQty > 0 ? 1 : 0,
+  const [requestQty, setRequestQty] = useState<number | "">(
+    availableQty > 0 ? 1 : "",
   );
 
   const isCurrentUserReserved = item.reservedByContact === volunteerContact;
@@ -174,9 +174,15 @@ export function ItemRow({
                 max={availableQty}
                 value={requestQty}
                 onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (isNaN(val)) setRequestQty(1);
-                  else setRequestQty(Math.min(availableQty, Math.max(1, val)));
+                  const val = e.target.value;
+                  setRequestQty(
+                    val === ""
+                      ? ""
+                      : Math.min(availableQty, Math.max(1, Number(val))),
+                  );
+                }}
+                onBlur={() => {
+                  if (requestQty === "") setRequestQty(1);
                 }}
                 className="w-20 rounded-md border border-input bg-background px-2.5 py-1 text-right text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
               />
@@ -185,7 +191,7 @@ export function ItemRow({
             <Button
               size="sm"
               className="w-full"
-              onClick={() => handleReserveQuantity(requestQty)}
+              onClick={() => handleReserveQuantity(requestQty || 0)}
               disabled={pending || availableQty <= 0}>
               {pending ? (
                 <LoaderCircle className="size-4 animate-spin" aria-hidden />

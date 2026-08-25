@@ -300,11 +300,23 @@ export function RequestHelpForm() {
                         type="number"
                         min={1}
                         value={item.quantity ?? 1}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const val = e.target.value;
                           updateItem(item.id, {
-                            quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
-                          })
-                        }
+                            quantity:
+                              val === ""
+                                ? ""
+                                : Math.max(1, parseInt(val, 10) || 1),
+                          });
+                        }}
+                        onBlur={() => {
+                          if (
+                            item.quantity === "" ||
+                            (item.quantity || 0) < 1
+                          ) {
+                            updateItem(item.id, { quantity: 1 });
+                          }
+                        }}
                         className={inputCls}
                       />
                     </Field>

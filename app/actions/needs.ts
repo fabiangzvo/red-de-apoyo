@@ -17,7 +17,7 @@ export type NewItemInput = {
   category: string;
   product: string;
   detail?: string;
-  quantity?: number;
+  quantity?: number | "";
 };
 
 export type PointWithItems = Point & { items: Item[] };
@@ -28,14 +28,9 @@ export async function getPointsWithItems(): Promise<PointWithItems[]> {
     .from(points)
     .orderBy(desc(points.createdAt));
 
-  const allItems = await db
-    .select()
-    .from(items)
-    .orderBy(asc(items.createdAt));
+  const allItems = await db.select().from(items).orderBy(asc(items.createdAt));
 
-  const allUsers = await db
-    .select()
-    .from(users);
+  const allUsers = await db.select().from(users);
 
   // 1. Relación con la tabla points (ítems asociados a un punto físico de ayuda)
   const pointList: PointWithItems[] = allPoints.map((p) => ({
