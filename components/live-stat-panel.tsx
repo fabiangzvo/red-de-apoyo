@@ -24,7 +24,7 @@ export function LiveStatPanel({ stats }: { stats: Stats }) {
 
   return (
     <div className="relative flex items-center">
-      <div className="w-full rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="w-full rounded-2xl border border-border bg-card p-6 shadow-sm shadow-primary/20">
         <div className="mt-4 flex flex-col items-center gap-2 justify-center">
           <p className="text-sm font-medium text-muted-foreground text-center">
             En este momento
