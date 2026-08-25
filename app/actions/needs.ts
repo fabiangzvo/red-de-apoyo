@@ -294,12 +294,77 @@ export async function releaseItem(itemId: number) {
   return { ok: true as const };
 }
 
-export async function deliverItem(itemId: number) {
+export async function deliverItem(itemId: number, contactInfo?: string) {
+  const contact = contactInfo?.trim();
+
+  const [item] = await db.select().from(items).where(eq(items.id, itemId));
+  if (!item) {
+    return { ok: false as const, error: "El ítem no existe." };
+  }
+
+  let deliveredQuantity = 0;
+
+  if (contact) {
+    const userReservations = await db
+      .select()
+      .from(itemReservations)
+      .where(
+        and(
+          eq(itemReservations.itemId, itemId),
+          eq(itemReservations.contact, contact),
+          eq(itemReservations.status, "reserved"),
+        ),
+      );
+
+    if (userReservations.length > 0) {
+      deliveredQuantity = userReservations.reduce((acc, r) => acc + r.quantity, 0);
+
+      await db
+        .update(itemReservations)
+        .set({ status: "delivered" })
+        .where(
+          and(
+            eq(itemReservations.itemId, itemId),
+            eq(itemReservations.contact, contact),
+            eq(itemReservations.status, "reserved"),
+          ),
+        );
+    }
+  }
+
+  // Fallback if no contact given or no specific reservation found:
+  if (deliveredQuantity === 0) {
+    deliveredQuantity =
+      item.quantityReserved > 0 ? item.quantityReserved : item.quantity;
+  }
+
+  const newQuantityReserved = Math.max(
+    0,
+    item.quantityReserved - deliveredQuantity,
+  );
+
+  const newStatus =
+    newQuantityReserved <= 0
+      ? "delivered"
+      : item.isDonation
+        ? "available"
+        : "pending";
+
   await db
     .update(items)
-    .set({ status: "delivered", deliveredAt: new Date() })
-    .where(and(eq(items.id, itemId), eq(items.status, "reserved")));
+    .set({
+      quantityReserved: newQuantityReserved,
+      status: newStatus,
+      deliveredAt: new Date(),
+      ...(newQuantityReserved <= 0
+        ? { reservedBy: null, reservedByContact: null }
+        : {}),
+    })
+    .where(eq(items.id, itemId));
+
   revalidatePath("/mapa");
+  revalidatePath("/mis-donaciones");
+  revalidatePath("/ofertas");
   return { ok: true as const };
 }
 

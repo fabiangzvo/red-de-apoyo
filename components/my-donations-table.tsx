@@ -41,6 +41,7 @@ import {
   CATEGORIES,
   categoryLabel,
   categoryColor,
+  getItemEffectiveStatus,
   type ItemStatus,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -72,19 +73,19 @@ function MyOfferCard({
   onEdit: (item: OfferItem) => void;
   onDelete: (item: OfferItem) => void;
 }) {
-  const rawStatus = (item.status || "available").toLowerCase();
-  const status: ItemStatus =
-    rawStatus === "delivered"
-      ? "delivered"
-      : rawStatus === "reserved"
-        ? "reserved"
-        : rawStatus === "pending"
-          ? "pending"
-          : "available";
+  const status = getItemEffectiveStatus({
+    status: item.status,
+    quantity: item.quantity,
+    quantityReserved: item.quantityReserved,
+    isDonation: true,
+  });
 
   const total = item.quantity ?? 1;
   const reserved = item.quantityReserved ?? 0;
-  const available = Math.max(0, total - reserved);
+  const available =
+    status === "delivered" || status === "reserved"
+      ? 0
+      : Math.max(0, total - reserved);
 
   return (
     <div

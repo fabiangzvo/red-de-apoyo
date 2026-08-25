@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ItemRow } from "@/components/item-row";
 import { StatusDot } from "@/components/status-badge";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, getItemEffectiveStatus } from "@/lib/constants";
 import { haversineKm } from "@/lib/geo";
 import type { PointWithItems } from "@/app/actions/needs";
 import { cn } from "@/lib/utils";
@@ -62,10 +62,11 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null,
   );
-  const [volunteerName, setVolunteerName] = useState("");
-  const [volunteerContact, setVolunteerContact] = useState("");
+  const [donorName, setDonorName] = useState("");
+  const [donorContact, setDonorContact] = useState("");
+  const [requesterName, setRequesterName] = useState("");
+  const [requesterContact, setRequesterContact] = useState("");
   const [nameHint, setNameHint] = useState(false);
-  const [requestingContact, setRequestingContact] = useState("");
   const [isDonation, setIsDonation] = useState<boolean>(false);
 
   useEffect(() => {
@@ -98,27 +99,37 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const userInfoStr = localStorage?.getItem("userInfo") || "{}";
-    const userRequestingStr = localStorage?.getItem("userRequesting") || "{}";
-
+    const userInfoStr = localStorage.getItem("userInfo");
     if (userInfoStr) {
-      const userInfo = JSON.parse(userInfoStr);
-      const userRequesting = JSON.parse(userRequestingStr);
+      try {
+        const userInfo = JSON.parse(userInfoStr);
+        if (userInfo.name) setDonorName(userInfo.name);
+        if (userInfo.phone || userInfo.contact)
+          setDonorContact(userInfo.phone || userInfo.contact);
+      } catch (e) {}
+    }
 
-      setVolunteerName(userInfo?.name ?? "");
-      setVolunteerContact(userInfo?.phone ?? "");
-      setRequestingContact(userRequesting?.contact ?? "");
+    const userRequestingStr = localStorage.getItem("userRequesting");
+    if (userRequestingStr) {
+      try {
+        const userRequesting = JSON.parse(userRequestingStr);
+        if (userRequesting.name) setRequesterName(userRequesting.name);
+        if (userRequesting.contact || userRequesting.phone)
+          setRequesterContact(userRequesting.contact || userRequesting.phone);
+      } catch (e) {}
     }
   }, []);
 
   useEffect(() => {
     if (session?.user) {
       if (session.user.name) {
-        setVolunteerName(session.user.name);
+        setDonorName((prev) => prev || session.user.name || "");
+        setRequesterName((prev) => prev || session.user.name || "");
       }
       const contact = session.user.phone || session.user.email || "";
       if (contact) {
-        setVolunteerContact(contact);
+        setDonorContact((prev) => prev || contact);
+        setRequesterContact((prev) => prev || contact);
       }
     }
   }, [session]);
@@ -145,12 +156,12 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
         if (statusFilter === "delivered") {
           if (
             p.items.length === 0 ||
-            !p.items.every((i) => i.status === "delivered")
+            !p.items.every((i) => getItemEffectiveStatus(i) === "delivered")
           )
             return false;
         } else if (
           statusFilter &&
-          !p.items.some((i) => i.status === statusFilter)
+          !p.items.some((i) => getItemEffectiveStatus(i) === statusFilter)
         ) {
           return false;
         }
@@ -249,22 +260,40 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
         {/* List / detail */}
         <div className="order-3 min-h-0 flex-1 rounded-2xl border border-border bg-card p-4 overflow-y-auto lg:order-none lg:rounded-none lg:border-0">
           {selected ? (
-            <PointDetail
-              point={selected}
-              volunteerName={volunteerName}
-              setVolunteerName={setVolunteerName}
-              volunteerContact={volunteerContact}
-              setVolunteerContact={setVolunteerContact}
-              nameHint={nameHint}
-              onNeedName={() => setNameHint(true)}
-              onBack={() => {
-                setSelectedId(null);
-                setNameHint(false);
-                router.refresh();
-              }}
-              onRefresh={() => router.refresh()}
-              requestingContact={requestingContact}
-            />
+            (() => {
+              const isSelectedDonation =
+                selected.id < 0 || selected.items.some((i) => i.isDonation);
+              const activeName = isSelectedDonation ? requesterName : donorName;
+              const setActiveName = isSelectedDonation
+                ? setRequesterName
+                : setDonorName;
+              const activeContact = isSelectedDonation
+                ? requesterContact
+                : donorContact;
+              const setActiveContact = isSelectedDonation
+                ? setRequesterContact
+                : setDonorContact;
+
+              return (
+                <PointDetail
+                  point={selected}
+                  volunteerName={activeName}
+                  setVolunteerName={setActiveName}
+                  volunteerContact={activeContact}
+                  setVolunteerContact={setActiveContact}
+                  donorContact={donorContact}
+                  requesterContact={requesterContact}
+                  nameHint={nameHint}
+                  onNeedName={() => setNameHint(true)}
+                  onBack={() => {
+                    setSelectedId(null);
+                    setNameHint(false);
+                    router.refresh();
+                  }}
+                  onRefresh={() => router.refresh()}
+                />
+              );
+            })()
           ) : (
             <PointList
               points={filtered}
@@ -328,13 +357,32 @@ function PointList({
         </p>
       </div>
       {points.map((p) => {
-        const pending = p.items.filter((i) => i.status === "pending").length;
-        const reserved = p.items.filter((i) => i.status === "reserved").length;
+        const pending = p.items.filter(
+          (i) =>
+            getItemEffectiveStatus(i) === "pending" ||
+            getItemEffectiveStatus(i) === "available",
+        ).length;
+        const reserved = p.items.filter(
+          (i) => getItemEffectiveStatus(i) === "reserved",
+        ).length;
         const delivered = p.items.filter(
-          (i) => i.status === "delivered",
+          (i) => getItemEffectiveStatus(i) === "delivered",
         ).length;
         const total = p.items.length;
         const allDone = total > 0 && delivered === total;
+
+        const firstItemStatus = p.items[0]
+          ? getItemEffectiveStatus(p.items[0])
+          : "available";
+        const firstItemAvailable =
+          firstItemStatus === "delivered" || firstItemStatus === "reserved"
+            ? 0
+            : Math.max(
+                0,
+                (p.items[0]?.quantity || 1) -
+                  (p.items[0]?.quantityReserved || 0),
+              );
+
         return (
           <button
             key={p.id}
@@ -385,7 +433,7 @@ function PointList({
               )}
               <span>
                 {p.id < 0
-                  ? `${Math.max(0, (p.items[0]?.quantity || 1) - (p.items[0]?.quantityReserved || 0))} disp. / ${p.items[0]?.quantity || 1} total`
+                  ? `${firstItemAvailable} disp. / ${p.items[0]?.quantity || 1} total`
                   : `${total} ítems`}
               </span>
             </div>
@@ -407,22 +455,24 @@ function PointDetail({
   setVolunteerName,
   volunteerContact,
   setVolunteerContact,
+  donorContact,
+  requesterContact,
   nameHint,
   onNeedName,
   onBack,
   onRefresh,
-  requestingContact,
 }: {
   point: PointWithItems & { distance: number | null };
   volunteerName: string;
   setVolunteerName: (v: string) => void;
   volunteerContact: string;
   setVolunteerContact: (v: string) => void;
+  donorContact: string;
+  requesterContact: string;
   nameHint: boolean;
   onNeedName: () => void;
   onBack: () => void;
   onRefresh: () => void;
-  requestingContact: string;
 }) {
   const { data: session } = useSession();
   const total = point.items.length;
@@ -545,21 +595,21 @@ function PointDetail({
             : null;
           const isItemOwner =
             !!point.contact &&
-            !!volunteerContact &&
             (point.contact === volunteerContact ||
+              point.contact === donorContact ||
+              point.contact === requesterContact ||
               item.reservedByContact === volunteerContact ||
+              item.reservedByContact === donorContact ||
+              item.reservedByContact === requesterContact ||
               (Boolean(session?.user) &&
                 (item.userId === currentUserId ||
                   point.contact === session?.user?.phone)));
 
-          console.log(
-            isItemOwner,
-            volunteerContact,
-            item.userId,
-            item,
-            point,
-            session?.user,
-          );
+          const canDelete =
+            point.contact === volunteerContact ||
+            point.contact === donorContact ||
+            point.contact === requesterContact;
+
           return (
             <ItemRow
               key={item.id}
@@ -570,7 +620,7 @@ function PointDetail({
               onRefresh={onRefresh}
               isOwner={isItemOwner}
               pointId={point.id}
-              canDelete={point.contact === volunteerContact}
+              canDelete={canDelete}
             />
           );
         })}

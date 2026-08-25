@@ -37,3 +37,23 @@ export const DEFAULT_CENTER: [number, number] = [
 export const DEFAULT_ZOOM = 15;
 
 export type ItemStatus = "pending" | "reserved" | "delivered" | "available";
+
+export function getItemEffectiveStatus(item: {
+  status?: string | null;
+  quantity?: number | null;
+  quantityReserved?: number | null;
+  isDonation?: boolean | null;
+}): ItemStatus {
+  const rawStatus = (item.status || "pending").toLowerCase();
+  if (rawStatus === "delivered") return "delivered";
+
+  const total = item.quantity ?? 1;
+  const reserved = item.quantityReserved ?? 0;
+  const available = Math.max(0, total - reserved);
+
+  if (available <= 0) return "reserved";
+  if (rawStatus === "reserved") {
+    return item.isDonation ? "available" : "pending";
+  }
+  return (rawStatus as ItemStatus) || (item.isDonation ? "available" : "pending");
+}

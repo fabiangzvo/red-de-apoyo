@@ -10,7 +10,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { categoryLabel, categoryColor, type ItemStatus } from "@/lib/constants";
+import {
+  categoryLabel,
+  categoryColor,
+  getItemEffectiveStatus,
+  type ItemStatus,
+} from "@/lib/constants";
 import {
   deliverItem,
   releaseItem,
@@ -39,14 +44,14 @@ export function ItemRow({
   pointId: number;
   canDelete?: boolean;
 }) {
-  const status = item.status as ItemStatus;
+  const status = getItemEffectiveStatus(item);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const availableQty = Math.max(
-    0,
-    (item.quantity || 1) - (item.quantityReserved || 0),
-  );
+  const availableQty =
+    status === "delivered" || status === "reserved"
+      ? 0
+      : Math.max(0, (item.quantity || 1) - (item.quantityReserved || 0));
   const reservedQty = item.quantityReserved || 0;
   const totalQty = item.quantity || 1;
 
@@ -70,10 +75,25 @@ export function ItemRow({
       onNeedName();
       return;
     }
-    localStorage.setItem(
-      "userInfo",
-      JSON.stringify({ name: volunteerName, phone: volunteerContact }),
-    );
+    if (typeof window !== "undefined") {
+      if (item.isDonation) {
+        localStorage.setItem(
+          "userRequesting",
+          JSON.stringify({
+            name: volunteerName.trim(),
+            contact: volunteerContact.trim(),
+          }),
+        );
+      } else {
+        localStorage.setItem(
+          "userInfo",
+          JSON.stringify({
+            name: volunteerName.trim(),
+            phone: volunteerContact.trim(),
+          }),
+        );
+      }
+    }
     run(() =>
       reserveItemQuantity(
         item.id,
@@ -160,9 +180,7 @@ export function ItemRow({
         </div>
       </div>
 
-      {(status === "pending" || status === "available") &&
-        availableQty > 0 &&
-        !isOwner && (
+      {status !== "delivered" && availableQty > 0 && !isOwner && (
           <div className="mt-3 flex flex-col gap-2 rounded-lg border border-primary/50 bg-primary/10 p-2.5">
             <div className="flex items-center justify-between gap-2">
               <label className="text-xs font-medium">
@@ -209,7 +227,7 @@ export function ItemRow({
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Button
             size="sm"
-            onClick={() => run(() => deliverItem(item.id))}
+            onClick={() => run(() => deliverItem(item.id, volunteerContact))}
             disabled={pending}>
             {pending ? (
               <LoaderCircle className="size-4 animate-spin" aria-hidden />

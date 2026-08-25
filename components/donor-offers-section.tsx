@@ -24,6 +24,7 @@ import {
   categoryLabel,
   categoryColor,
   CATEGORIES,
+  getItemEffectiveStatus,
   type ItemStatus,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import type { DonorOffer } from "@/lib/db/schema";
-import { reserveItemQuantity, releaseItem } from "@/app/actions/needs";
+import { reserveItemQuantity, releaseItem, deliverItem } from "@/app/actions/needs";
 
 export interface DonorOfferExtended extends DonorOffer {
   quantityReserved?: number | null;
@@ -128,8 +129,11 @@ function RequestHelpModal({
 
     if (typeof window !== "undefined") {
       localStorage.setItem(
-        "userInfo",
-        JSON.stringify({ name: volunteerName, phone: volunteerContact }),
+        "userRequesting",
+        JSON.stringify({
+          name: volunteerName.trim(),
+          contact: volunteerContact.trim(),
+        }),
       );
     }
 
@@ -311,23 +315,35 @@ function OfferCard({
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const rawStatus = (offer.status || "available").toLowerCase();
-  const status: ItemStatus =
-    rawStatus === "delivered"
-      ? "delivered"
-      : rawStatus === "reserved"
-        ? "reserved"
-        : rawStatus === "pending"
-          ? "pending"
-          : "available";
+  const status = getItemEffectiveStatus({
+    status: offer.status,
+    quantity: offer.quantity,
+    quantityReserved: offer.quantityReserved,
+    isDonation: true,
+  });
 
   const totalQty = offer.quantity || 1;
   const reservedQty = offer.quantityReserved || 0;
-  const availableQty = Math.max(0, totalQty - reservedQty);
+  const availableQty =
+    status === "delivered" || status === "reserved"
+      ? 0
+      : Math.max(0, totalQty - reservedQty);
 
   const isCurrentUserReserved =
     Boolean(volunteerContact.trim()) &&
     offer.reservedByContact === volunteerContact.trim();
+
+  function handleDeliver() {
+    setError(null);
+    startTransition(async () => {
+      const res = await deliverItem(offer.id, volunteerContact);
+      if (!res.ok) {
+        setError("No se pudo entregar.");
+      } else {
+        router.refresh();
+      }
+    });
+  }
 
   function handleRelease() {
     setError(null);
@@ -424,8 +440,7 @@ function OfferCard({
           </div>
 
           {/* Request Button -> triggers Modal */}
-          {(status === "pending" || status === "available") &&
-            availableQty > 0 && (
+          {status !== "delivered" && availableQty > 0 && (
               <Button
                 size="sm"
                 className="w-full gap-2 mt-2 font-medium"
@@ -442,19 +457,33 @@ function OfferCard({
                   Ítem Reservado
                 </span>
                 {isCurrentUserReserved && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs px-2 gap-1"
-                    onClick={handleRelease}
-                    disabled={pending}>
-                    {pending ? (
-                      <LoaderCircle className="size-3 animate-spin" />
-                    ) : (
-                      <Undo2 className="size-3" />
-                    )}
-                    Cancelar solicitud
-                  </Button>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs px-2 gap-1"
+                      onClick={handleDeliver}
+                      disabled={pending}>
+                      {pending ? (
+                        <LoaderCircle className="size-3 animate-spin" />
+                      ) : (
+                        <CircleCheckBig className="size-3" />
+                      )}
+                      Marcar recibido
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs px-2 gap-1"
+                      onClick={handleRelease}
+                      disabled={pending}>
+                      {pending ? (
+                        <LoaderCircle className="size-3 animate-spin" />
+                      ) : (
+                        <Undo2 className="size-3" />
+                      )}
+                      Cancelar
+                    </Button>
+                  </div>
                 )}
               </div>
               {offer.reservedBy && (
@@ -504,10 +533,10 @@ export function DonorOffersSection({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title">("newest");
 
-  // Global volunteer details stored in state and persisted in localStorage
+  // Requester details stored in state and persisted in localStorage under userRequesting
   const [volunteerName, setVolunteerName] = useState(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("userInfo");
+      const saved = localStorage.getItem("userRequesting");
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -520,11 +549,11 @@ export function DonorOffersSection({
 
   const [volunteerContact, setVolunteerContact] = useState(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("userInfo");
+      const saved = localStorage.getItem("userRequesting");
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          return parsed.phone || "";
+          return parsed.contact || parsed.phone || "";
         } catch (e) {}
       }
     }
@@ -545,15 +574,13 @@ export function DonorOffersSection({
   // Filter only offers with available stock
   const inStockOffers = useMemo(() => {
     return offers.filter((o) => {
-      const totalQty = o.quantity || 1;
-      const reservedQty = o.quantityReserved || 0;
-      const availableQty = Math.max(0, totalQty - reservedQty);
-      const offerStatus = (o.status || "available").toLowerCase();
-      return (
-        availableQty > 0 &&
-        offerStatus !== "delivered" &&
-        offerStatus !== "reserved"
-      );
+      const status = getItemEffectiveStatus({
+        status: o.status,
+        quantity: o.quantity,
+        quantityReserved: o.quantityReserved,
+        isDonation: true,
+      });
+      return status !== "delivered" && status !== "reserved";
     });
   }, [offers]);
 

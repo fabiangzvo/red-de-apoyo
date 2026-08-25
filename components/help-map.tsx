@@ -4,12 +4,18 @@ import { useEffect } from "react"
 import { Circle, MapContainer, Marker, TileLayer, useMap } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { DEFAULT_CENTER, DEFAULT_ZOOM } from "@/lib/constants"
+import { DEFAULT_CENTER, DEFAULT_ZOOM, getItemEffectiveStatus } from "@/lib/constants"
 import type { PointWithItems } from "@/app/actions/needs"
 
 function markerColor(point: PointWithItems) {
-  const pending = point.items.filter((i) => i.status === "pending").length
-  const reserved = point.items.filter((i) => i.status === "reserved").length
+  const pending = point.items.filter(
+    (i) =>
+      getItemEffectiveStatus(i) === "pending" ||
+      getItemEffectiveStatus(i) === "available",
+  ).length
+  const reserved = point.items.filter(
+    (i) => getItemEffectiveStatus(i) === "reserved",
+  ).length
   if (pending > 0) return "var(--pending)"
   if (reserved > 0) return "var(--reserved)"
   return "var(--delivered)"
@@ -17,7 +23,11 @@ function markerColor(point: PointWithItems) {
 
 function makeIcon(point: PointWithItems, selected: boolean) {
   const color = markerColor(point)
-  const pending = point.items.filter((i) => i.status === "pending").length
+  const pending = point.items.filter(
+    (i) =>
+      getItemEffectiveStatus(i) === "pending" ||
+      getItemEffectiveStatus(i) === "available",
+  ).length
   const size = selected ? 40 : 34
   return L.divIcon({
     className: "",

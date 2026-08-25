@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   CircleCheckBig,
@@ -43,6 +44,7 @@ function newDraft(): DraftItem {
 
 export function RequestHelpForm() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -55,6 +57,28 @@ export function RequestHelpForm() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("userRequesting");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.name) setName(parsed.name);
+          if (parsed.contact || parsed.phone)
+            setContact(parsed.contact || parsed.phone);
+        } catch (e) {}
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      if (session.user.name && !name) setName(session.user.name);
+      const c = session.user.phone || session.user.email;
+      if (c && !contact) setContact(c);
+    }
+  }, [session]);
 
   const validItems = useMemo(
     () => items.filter((i) => i.product.trim().length > 0),
