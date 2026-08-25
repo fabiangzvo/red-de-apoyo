@@ -4,17 +4,17 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  ArrowUpDown,
-  ChevronUp,
   ChevronDown,
   Trash2,
   Gift,
   Plus,
   Filter,
-  CheckCircle2,
-  Clock,
   Package,
   Pencil,
+  User,
+  MapPin,
+  Phone,
+  MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,15 +31,22 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { CATEGORIES, categoryLabel, categoryColor } from "@/lib/constants";
+import {
+  CATEGORIES,
+  categoryLabel,
+  categoryColor,
+  type ItemStatus,
+} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { deleteDonorOffer } from "@/app/actions/offers";
 import { DonorOfferModal } from "@/components/donor-offer-modal";
+import { StatusBadge } from "@/components/status-badge";
 
 export interface OfferItem {
   id: number;
@@ -56,29 +63,126 @@ export interface OfferItem {
   createdAt: Date | string;
 }
 
-type SortField = "title" | "category" | "status" | "createdAt";
-type SortOrder = "asc" | "desc";
+function MyOfferCard({
+  item,
+  onEdit,
+  onDelete,
+}: {
+  item: OfferItem;
+  onEdit: (item: OfferItem) => void;
+  onDelete: (item: OfferItem) => void;
+}) {
+  const rawStatus = (item.status || "available").toLowerCase();
+  const status: ItemStatus =
+    rawStatus === "delivered"
+      ? "delivered"
+      : rawStatus === "reserved"
+        ? "reserved"
+        : rawStatus === "pending"
+          ? "pending"
+          : "available";
+
+  const total = item.quantity ?? 1;
+  const reserved = item.quantityReserved ?? 0;
+  const available = Math.max(0, total - reserved);
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col justify-between rounded-xl border border-border bg-background p-4 shadow-xs transition-all hover:border-primary/80 hover:shadow-md hover:shadow-primary/10",
+        status === "delivered" && "opacity-70",
+      )}>
+      <div>
+        {/* Header tags: Category pill + StatusBadge + Options Dropdown */}
+        <div className="flex items-center gap-2 justify-between w-full">
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "rounded-md border px-2 py-0.5 text-xs font-semibold shadow-xs",
+                categoryColor(item.category),
+              )}>
+              {categoryLabel(item.category)}
+            </span>
+            <StatusBadge status={status} />
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="flex size-7 items-center justify-center rounded-lg border border-transparent cursor-pointer hover:bg-primary/10 hover:text-primary"
+              aria-label="Opciones de donación">
+              <MoreVertical className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={() => onEdit(item)}
+                className="hover:!bg-primary/10 hover:!text-primary cursor-pointer group">
+                <Pencil className="size-3.5 group-hover:text-primary" />
+                Editar donación
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onDelete(item)}
+                className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive group">
+                <Trash2 className="size-3.5 group-hover:text-destructive" />
+                Eliminar donación
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Title */}
+        <p
+          className={cn(
+            "mt-2 font-medium text-foreground text-base",
+            status === "delivered" && "line-through decoration-delivered/60",
+          )}>
+          {item.title}
+        </p>
+
+        {/* Detail */}
+        {item.detail && (
+          <p className="mt-1 text-sm text-muted-foreground leading-relaxed line-clamp-3">
+            {item.detail}
+          </p>
+        )}
+
+        {/* Quantities Stock Info */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+            Disponibles: {available}
+          </span>
+          {reserved > 0 && (
+            <span className="inline-flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
+              Reservadas: {reserved}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 text-muted-foreground text-[11px]">
+            Total Stock: {total}
+          </span>
+        </div>
+      </div>
+
+      {/* Location info if present */}
+      {item.locationName && (
+        <div className="mt-3 pt-2.5 border-t border-border flex items-center gap-1.5 text-xs text-muted-foreground">
+          <MapPin className="size-3.5 text-primary/70 shrink-0" />
+          <span className="truncate font-medium text-foreground">
+            {item.locationName}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("todas");
-  const [sortField, setSortField] = useState<SortField>("createdAt");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<OfferItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<OfferItem | null>(null);
-
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortOrder("asc");
-    }
-  };
 
   const handleEdit = (item: OfferItem) => {
     setEditingItem(item);
@@ -110,10 +214,10 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
     }
   };
 
-  const filteredAndSortedOffers = useMemo(() => {
+  const filteredOffers = useMemo(() => {
     let list = [...offers];
 
-    // Filter by name / search query
+    // Filter by search query
     if (search.trim()) {
       const q = search.toLowerCase().trim();
       list = list.filter(
@@ -128,32 +232,21 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
       list = list.filter((o) => o.category === selectedCategory);
     }
 
-    // Sort list
+    // Sort newest first by default
     list.sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
-
-      if (sortField === "createdAt") {
-        aValue = new Date(a.createdAt).getTime();
-        bValue = new Date(b.createdAt).getTime();
-      } else if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = (bValue || "").toLowerCase();
-      }
-
-      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
-      return 0;
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+      return timeB - timeA;
     });
 
     return list;
-  }, [offers, search, selectedCategory, sortField, sortOrder]);
+  }, [offers, search, selectedCategory]);
 
   return (
     <>
       <div>
         {/* Controls bar */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card py-2">
           {/* Search Input */}
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -162,7 +255,7 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filtrar por nombre de producto o detalle..."
-              className="w-full rounded-lg border border-input bg-background pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-input bg-background pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-hidden focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -170,7 +263,7 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
           <div className="flex items-center gap-2.5 flex-wrap">
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary/20 hover:text-primary hover:border-primary/20 outline-none cursor-pointer"
+                className="flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary/20 hover:text-primary hover:border-primary/20 outline-hidden cursor-pointer"
                 aria-label="Filtrar por categoría">
                 <Filter className="size-4" />
                 <span>
@@ -208,197 +301,43 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
           </div>
         </div>
 
-        {/* Table Container */}
-        <div className="overflow-hidden rounded-2xl border border-primary/10 bg-card shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="border-b border-primary/10 bg-primary/20 text-xs font-semibold ">
-                  <th
-                    onClick={() => toggleSort("title")}
-                    className="py-3.5 px-4 cursor-pointer hover:bg-primary/10 transition select-none">
-                    <div className="flex items-center gap-1.5">
-                      <span>Producto / Nombre</span>
-                      {sortField === "title" ? (
-                        sortOrder === "asc" ? (
-                          <ChevronUp className="size-3.5" />
-                        ) : (
-                          <ChevronDown className="size-3.5" />
-                        )
-                      ) : (
-                        <ArrowUpDown className="size-3" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => toggleSort("category")}
-                    className="py-3.5 px-4 cursor-pointer hover:bg-primary/10 transition select-none">
-                    <div className="flex items-center gap-1.5">
-                      <span>Categoría</span>
-                      {sortField === "category" ? (
-                        sortOrder === "asc" ? (
-                          <ChevronUp className="size-3.5" />
-                        ) : (
-                          <ChevronDown className="size-3.5" />
-                        )
-                      ) : (
-                        <ArrowUpDown className="size-3" />
-                      )}
-                    </div>
-                  </th>
-                  <th className="py-3.5 px-4 text-center">Stock Total</th>
-                  <th className="py-3.5 px-4 text-center">Reservado</th>
-                  <th className="py-3.5 px-4 text-center">Disponible</th>
-                  <th className="py-3.5 px-4">Detalles / Nota</th>
-                  <th
-                    onClick={() => toggleSort("status")}
-                    className="py-3.5 px-4 cursor-pointer hover:bg-primary/10 transition select-none">
-                    <div className="flex items-center gap-1.5">
-                      <span>Estado</span>
-                      {sortField === "status" ? (
-                        sortOrder === "asc" ? (
-                          <ChevronUp className="size-3.5" />
-                        ) : (
-                          <ChevronDown className="size-3.5" />
-                        )
-                      ) : (
-                        <ArrowUpDown className="size-3" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => toggleSort("createdAt")}
-                    className="py-3.5 px-4 cursor-pointer hover:bg-primary/20 transition select-none">
-                    <div className="flex items-center gap-1.5">
-                      <span>Fecha</span>
-                      {sortField === "createdAt" ? (
-                        sortOrder === "asc" ? (
-                          <ChevronUp className="size-3.5" />
-                        ) : (
-                          <ChevronDown className="size-3.5" />
-                        )
-                      ) : (
-                        <ArrowUpDown className="size-3" />
-                      )}
-                    </div>
-                  </th>
-                  <th className="py-3.5 px-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredAndSortedOffers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-12 text-center">
-                      <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/5 mb-3">
-                        <Package className="size-6" />
-                      </div>
-                      <p className="font-semibold text-foreground text-sm">
-                        No se encontraron donaciones
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                        {search || selectedCategory !== "todas"
-                          ? "Intenta ajustar los filtros de búsqueda o categoría."
-                          : "Aún no has registrado ninguna ayuda disponible."}
-                      </p>
-                      {!search && selectedCategory === "todas" && (
-                        <Button
-                          onClick={handleCreateNew}
-                          size="sm"
-                          className="mt-4 gap-1.5">
-                          <Plus className="size-4" />
-                          Publicar mi primera donación
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAndSortedOffers.map((item) => {
-                    const dateFormatted = new Date(
-                      item.createdAt,
-                    ).toLocaleDateString("es-CO", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    });
-
-                    const total = item.quantity ?? 1;
-                    const reserved = item.quantityReserved ?? 0;
-                    const available = Math.max(0, total - reserved);
-
-                    return (
-                      <tr
-                        key={item.id}
-                        className="hover:bg-primary/5 transition-colors">
-                        <td className="py-3.5 px-4 font-semibold text-foreground">
-                          {item.title}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                              categoryColor(item.category),
-                            )}>
-                            {categoryLabel(item.category)}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center text-xs font-semibold text-foreground">
-                          {total}
-                        </td>
-                        <td className="py-3.5 px-4 text-center text-xs font-semibold text-amber-600 dark:text-amber-400">
-                          {reserved}
-                        </td>
-                        <td className="py-3.5 px-4 text-center text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          {available}
-                        </td>
-                        <td className="py-3.5 px-4 text-xs text-muted-foreground max-w-xs truncate">
-                          {item.detail || "—"}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {item.status === "available" ||
-                          item.status === "pending" ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                              <CheckCircle2 className="size-3" />
-                              Disponible
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-secondary/15 border border-primary/10 px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
-                              <Clock className="size-3" />
-                              {item.status}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                          {dateFormatted}
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => handleEdit(item)}
-                              className=" hover:bg-primary/10"
-                              aria-label={`Editar ${item.title}`}>
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={deletingId === item.id}
-                              onClick={() => setItemToDelete(item)}
-                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              aria-label={`Eliminar ${item.title}`}>
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+        {/* Offers Cards Grid */}
+        {filteredOffers.length > 0 ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredOffers.map((item) => (
+              <MyOfferCard
+                key={item.id}
+                item={item}
+                onEdit={handleEdit}
+                onDelete={setItemToDelete}
+              />
+            ))}
           </div>
-        </div>
+        ) : (
+          /* Empty State */
+          <div className="mt-6 rounded-2xl border border-dashed border-border bg-card/50 p-12 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3">
+              <Package className="size-6" />
+            </div>
+            <h3 className="font-semibold text-foreground text-base">
+              No se encontraron donaciones
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+              {search || selectedCategory !== "todas"
+                ? "Intenta ajustar los filtros de búsqueda o categoría."
+                : "Aún no has registrado ninguna ayuda disponible."}
+            </p>
+            {!search && selectedCategory === "todas" && (
+              <Button
+                onClick={handleCreateNew}
+                size="sm"
+                className="mt-4 gap-1.5">
+                <Plus className="size-4" />
+                Publicar mi primera donación
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <DonorOfferModal
