@@ -74,9 +74,9 @@ export function RequestHelpForm() {
 
   useEffect(() => {
     if (session?.user) {
-      if (session.user.name && !name) setName(session.user.name);
+      if (session.user.name) setName(session.user.name);
       const c = session.user.phone || session.user.email;
-      if (c && !contact) setContact(c);
+      if (c) setContact(c);
     }
   }, [session]);
 

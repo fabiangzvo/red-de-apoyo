@@ -99,37 +99,35 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const userInfoStr = localStorage.getItem("userInfo");
-    if (userInfoStr) {
-      try {
-        const userInfo = JSON.parse(userInfoStr);
-        if (userInfo.name) setDonorName(userInfo.name);
-        if (userInfo.phone || userInfo.contact)
-          setDonorContact(userInfo.phone || userInfo.contact);
-      } catch (e) {}
-    }
-
-    const userRequestingStr = localStorage.getItem("userRequesting");
-    if (userRequestingStr) {
-      try {
-        const userRequesting = JSON.parse(userRequestingStr);
-        if (userRequesting.name) setRequesterName(userRequesting.name);
-        if (userRequesting.contact || userRequesting.phone)
-          setRequesterContact(userRequesting.contact || userRequesting.phone);
-      } catch (e) {}
-    }
-  }, []);
-
-  useEffect(() => {
     if (session?.user) {
       if (session.user.name) {
-        setDonorName((prev) => prev || session.user.name || "");
-        setRequesterName((prev) => prev || session.user.name || "");
+        setDonorName(session.user.name);
+        setRequesterName(session.user.name);
       }
       const contact = session.user.phone || session.user.email || "";
       if (contact) {
-        setDonorContact((prev) => prev || contact);
-        setRequesterContact((prev) => prev || contact);
+        setDonorContact(contact);
+        setRequesterContact(contact);
+      }
+    } else {
+      const userInfoStr = localStorage.getItem("userInfo");
+      if (userInfoStr) {
+        try {
+          const userInfo = JSON.parse(userInfoStr);
+          if (userInfo.name) setDonorName(userInfo.name);
+          if (userInfo.phone || userInfo.contact)
+            setDonorContact(userInfo.phone || userInfo.contact);
+        } catch (e) {}
+      }
+
+      const userRequestingStr = localStorage.getItem("userRequesting");
+      if (userRequestingStr) {
+        try {
+          const userRequesting = JSON.parse(userRequestingStr);
+          if (userRequesting.name) setRequesterName(userRequesting.name);
+          if (userRequesting.contact || userRequesting.phone)
+            setRequesterContact(userRequesting.contact || userRequesting.phone);
+        } catch (e) {}
       }
     }
   }, [session]);
@@ -594,21 +592,16 @@ function PointDetail({
             ? parseInt(session.user.id, 10)
             : null;
           const isItemOwner =
-            !!point.contact &&
-            (point.contact === volunteerContact ||
-              point.contact === donorContact ||
-              point.contact === requesterContact ||
-              item.reservedByContact === volunteerContact ||
-              item.reservedByContact === donorContact ||
-              item.reservedByContact === requesterContact ||
-              (Boolean(session?.user) &&
-                (item.userId === currentUserId ||
-                  point.contact === session?.user?.phone)));
+            (Boolean(point.contact) &&
+              (point.contact === volunteerContact ||
+                point.contact === donorContact ||
+                point.contact === requesterContact)) ||
+            (Boolean(session?.user) &&
+              (item.userId === currentUserId ||
+                point.contact === session?.user?.phone ||
+                point.contact === session?.user?.email));
 
-          const canDelete =
-            point.contact === volunteerContact ||
-            point.contact === donorContact ||
-            point.contact === requesterContact;
+          const canDelete = isItemOwner;
 
           return (
             <ItemRow

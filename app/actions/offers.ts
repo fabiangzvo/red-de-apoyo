@@ -3,7 +3,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { items, donorOffers, type DonorOffer } from "@/lib/db/schema";
+import { items, donorOffers, itemReservations, type DonorOffer } from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -102,6 +102,11 @@ export async function getDonorOffers() {
       .where(eq(items.isDonation, true))
       .orderBy(desc(items.createdAt));
 
+    const allReservations = await db
+      .select()
+      .from(itemReservations)
+      .where(eq(itemReservations.status, "reserved"));
+
     if (donationItems.length > 0) {
       return donationItems.map((item) => ({
         id: item.id,
@@ -120,6 +125,7 @@ export async function getDonorOffers() {
         quantityReserved: item.quantityReserved,
         reservedBy: item.reservedBy,
         reservedByContact: item.reservedByContact,
+        reservations: allReservations.filter((r) => r.itemId === item.id),
       }));
     }
 

@@ -20,7 +20,8 @@ export type NewItemInput = {
   quantity?: number | "";
 };
 
-export type PointWithItems = Point & { items: Item[] };
+export type ItemWithReservations = Item & { reservations?: ItemReservation[] };
+export type PointWithItems = Point & { items: ItemWithReservations[] };
 
 export async function getPointsWithItems(): Promise<PointWithItems[]> {
   const allPoints = await db
@@ -32,15 +33,27 @@ export async function getPointsWithItems(): Promise<PointWithItems[]> {
 
   const allUsers = await db.select().from(users);
 
+  const allReservations = await db
+    .select()
+    .from(itemReservations)
+    .where(eq(itemReservations.status, "reserved"));
+
+  const itemsWithReservations: ItemWithReservations[] = allItems.map(
+    (item) => ({
+      ...item,
+      reservations: allReservations.filter((r) => r.itemId === item.id),
+    }),
+  );
+
   // 1. Relación con la tabla points (ítems asociados a un punto físico de ayuda)
   const pointList: PointWithItems[] = allPoints.map((p) => ({
     ...p,
-    items: allItems.filter((i) => i.pointId === p.id),
+    items: itemsWithReservations.filter((i) => i.pointId === p.id),
   }));
 
   // 2. Relación con la tabla users (donaciones registradas por usuarios sin punto físico)
   // Cada donación se lista de forma independiente sin agrupar por donante
-  const userItemsWithoutPoint = allItems.filter(
+  const userItemsWithoutPoint = itemsWithReservations.filter(
     (i) => i.pointId === null && i.userId !== null,
   );
 
@@ -268,25 +281,97 @@ export async function getItemReservations(
     .orderBy(desc(itemReservations.createdAt));
 }
 
-export async function releaseItem(itemId: number) {
+export async function releaseItem(itemId: number, contactInfo?: string) {
+  const contact = contactInfo?.trim();
   const [existing] = await db.select().from(items).where(eq(items.id, itemId));
-  const newStatus = existing?.isDonation ? "available" : "pending";
+  if (!existing) {
+    return { ok: false as const, error: "El ítem no existe." };
+  }
+
+  let releasedQuantity = 0;
+
+  if (contact) {
+    const userReservations = await db
+      .select()
+      .from(itemReservations)
+      .where(
+        and(
+          eq(itemReservations.itemId, itemId),
+          eq(itemReservations.contact, contact),
+          eq(itemReservations.status, "reserved"),
+        ),
+      );
+
+    if (userReservations.length > 0) {
+      releasedQuantity = userReservations.reduce((acc, r) => acc + r.quantity, 0);
+
+      await db
+        .update(itemReservations)
+        .set({ status: "cancelled" })
+        .where(
+          and(
+            eq(itemReservations.itemId, itemId),
+            eq(itemReservations.contact, contact),
+            eq(itemReservations.status, "reserved"),
+          ),
+        );
+    }
+  }
+
+  // Fallback if no contact given or no specific active reservation found:
+  if (releasedQuantity === 0) {
+    releasedQuantity =
+      existing.quantityReserved > 0 ? existing.quantityReserved : existing.quantity;
+    await db
+      .update(itemReservations)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(itemReservations.itemId, itemId),
+          eq(itemReservations.status, "reserved"),
+        ),
+      );
+  }
+
+  const newQuantityReserved = Math.max(
+    0,
+    existing.quantityReserved - releasedQuantity,
+  );
+
+  const defaultStatus = existing.isDonation ? "available" : "pending";
+  const newStatus = newQuantityReserved <= 0 ? defaultStatus : existing.status;
+
+  let nextReservedBy: string | null = null;
+  let nextReservedByContact: string | null = null;
+
+  if (newQuantityReserved > 0) {
+    const [remaining] = await db
+      .select()
+      .from(itemReservations)
+      .where(
+        and(
+          eq(itemReservations.itemId, itemId),
+          eq(itemReservations.status, "reserved"),
+        ),
+      )
+      .orderBy(desc(itemReservations.createdAt));
+
+    if (remaining) {
+      nextReservedBy = remaining.name;
+      nextReservedByContact = remaining.contact;
+    }
+  }
 
   await db
     .update(items)
     .set({
       status: newStatus,
-      quantityReserved: 0,
-      reservedBy: null,
-      reservedByContact: null,
-      reservedAt: null,
+      quantityReserved: newQuantityReserved,
+      reservedBy: nextReservedBy,
+      reservedByContact: nextReservedByContact,
+      reservedAt: nextReservedBy ? existing.reservedAt : null,
     })
     .where(eq(items.id, itemId));
-
-  await db
-    .update(itemReservations)
-    .set({ status: "cancelled" })
-    .where(eq(itemReservations.itemId, itemId));
 
   revalidatePath("/mapa");
   revalidatePath("/mis-donaciones");
@@ -343,22 +428,41 @@ export async function deliverItem(itemId: number, contactInfo?: string) {
     item.quantityReserved - deliveredQuantity,
   );
 
-  const newStatus =
-    newQuantityReserved <= 0
-      ? "delivered"
-      : item.isDonation
-        ? "available"
-        : "pending";
+  const newQuantity = Math.max(0, item.quantity - deliveredQuantity);
+
+  const defaultStatus = item.isDonation ? "available" : "pending";
+  const newStatus = newQuantity <= 0 ? "delivered" : defaultStatus;
+
+  let nextReservedBy: string | null = null;
+  let nextReservedByContact: string | null = null;
+
+  if (newQuantityReserved > 0) {
+    const [remaining] = await db
+      .select()
+      .from(itemReservations)
+      .where(
+        and(
+          eq(itemReservations.itemId, itemId),
+          eq(itemReservations.status, "reserved"),
+        ),
+      )
+      .orderBy(desc(itemReservations.createdAt));
+
+    if (remaining) {
+      nextReservedBy = remaining.name;
+      nextReservedByContact = remaining.contact;
+    }
+  }
 
   await db
     .update(items)
     .set({
+      quantity: newQuantity,
       quantityReserved: newQuantityReserved,
       status: newStatus,
       deliveredAt: new Date(),
-      ...(newQuantityReserved <= 0
-        ? { reservedBy: null, reservedByContact: null }
-        : {}),
+      reservedBy: nextReservedBy,
+      reservedByContact: nextReservedByContact,
     })
     .where(eq(items.id, itemId));
 

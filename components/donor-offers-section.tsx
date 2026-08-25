@@ -37,13 +37,14 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import type { DonorOffer } from "@/lib/db/schema";
+import type { DonorOffer, ItemReservation } from "@/lib/db/schema";
 import { reserveItemQuantity, releaseItem, deliverItem } from "@/app/actions/needs";
 
 export interface DonorOfferExtended extends DonorOffer {
   quantityReserved?: number | null;
   reservedBy?: string | null;
   reservedByContact?: string | null;
+  reservations?: ItemReservation[];
 }
 
 interface DonorOffersSectionProps {
@@ -314,6 +315,7 @@ function OfferCard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: session } = useSession();
 
   const status = getItemEffectiveStatus({
     status: offer.status,
@@ -329,14 +331,44 @@ function OfferCard({
       ? 0
       : Math.max(0, totalQty - reservedQty);
 
+  const activeContact =
+    session?.user?.phone || session?.user?.email || volunteerContact.trim();
+
+  const activeReservations =
+    offer.reservations?.filter((r) => r.status === "reserved") || [];
+
+  const currentUserReservations = activeReservations.filter(
+    (r) =>
+      r.contact === volunteerContact.trim() ||
+      (session?.user &&
+        (r.contact === session.user.phone ||
+          r.contact === session.user.email)),
+  );
+
+  const userReservedQty =
+    currentUserReservations.length > 0
+      ? currentUserReservations.reduce((acc, r) => acc + r.quantity, 0)
+      : reservedQty;
+
   const isCurrentUserReserved =
-    Boolean(volunteerContact.trim()) &&
-    offer.reservedByContact === volunteerContact.trim();
+    currentUserReservations.length > 0 ||
+    (Boolean(offer.reservedByContact) &&
+      (offer.reservedByContact === volunteerContact.trim() ||
+        (Boolean(session?.user) &&
+          (offer.reservedByContact === session?.user?.phone ||
+            offer.reservedByContact === session?.user?.email))));
+
+  const reserversCount =
+    activeReservations.length > 0
+      ? activeReservations.length
+      : offer.reservedBy && (reservedQty > 0 || status === "delivered")
+        ? 1
+        : 0;
 
   function handleDeliver() {
     setError(null);
     startTransition(async () => {
-      const res = await deliverItem(offer.id, volunteerContact);
+      const res = await deliverItem(offer.id, activeContact);
       if (!res.ok) {
         setError("No se pudo entregar.");
       } else {
@@ -348,7 +380,7 @@ function OfferCard({
   function handleRelease() {
     setError(null);
     startTransition(async () => {
-      const res = await releaseItem(offer.id);
+      const res = await releaseItem(offer.id, activeContact);
       if (!res.ok) {
         setError("No se pudo cancelar la solicitud.");
       } else {
@@ -440,7 +472,7 @@ function OfferCard({
           </div>
 
           {/* Request Button -> triggers Modal */}
-          {status !== "delivered" && availableQty > 0 && (
+          {status !== "delivered" && status !== "reserved" && availableQty > 0 && !isCurrentUserReserved && (
               <Button
                 size="sm"
                 className="w-full gap-2 mt-2 font-medium"
@@ -450,7 +482,16 @@ function OfferCard({
               </Button>
             )}
 
-          {status === "reserved" && (
+          {reserversCount > 0 && (reservedQty > 0 || status === "delivered") && (
+            <div className="mt-2 text-xs text-muted-foreground font-medium">
+              Solicitado por{" "}
+              <span className="text-foreground font-semibold">
+                {reserversCount} {reserversCount === 1 ? "persona" : "personas"}
+              </span>
+            </div>
+          )}
+
+          {reservedQty > 0 && (
             <div className="rounded-lg border border-border bg-muted/40 p-2.5 text-xs space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-foreground">
@@ -562,10 +603,10 @@ export function DonorOffersSection({
 
   useEffect(() => {
     if (session?.user) {
-      if (session.user.name && !volunteerName) {
+      if (session.user.name) {
         setVolunteerName(session.user.name);
       }
-      if ((session.user.phone || session.user.email) && !volunteerContact) {
+      if (session.user.phone || session.user.email) {
         setVolunteerContact(session.user.phone || session.user.email || "");
       }
     }
