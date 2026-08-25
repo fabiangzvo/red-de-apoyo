@@ -169,9 +169,13 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
         return true;
       })
       .sort((a, b) => {
-        if (a.distance != null && b.distance != null)
+        if (
+          a.distance != null &&
+          b.distance != null &&
+          a.distance !== b.distance
+        )
           return a.distance - b.distance;
-        return 0;
+        return b.id - a.id;
       });
   }, [points, category, statusFilter, radiusKm, userLocation, isDonation]);
 

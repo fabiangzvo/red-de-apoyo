@@ -100,7 +100,7 @@ export async function getDonorOffers() {
       .select()
       .from(items)
       .where(eq(items.isDonation, true))
-      .orderBy(desc(items.createdAt));
+      .orderBy(desc(items.createdAt), desc(items.id));
 
     const allReservations = await db
       .select()
@@ -132,7 +132,7 @@ export async function getDonorOffers() {
     const offers = await db
       .select()
       .from(donorOffers)
-      .orderBy(desc(donorOffers.createdAt));
+      .orderBy(desc(donorOffers.createdAt), desc(donorOffers.id));
     return offers;
   } catch (error) {
     console.error("Error fetching donor offers:", error);

@@ -24,62 +24,70 @@ export type ItemWithReservations = Item & { reservations?: ItemReservation[] };
 export type PointWithItems = Point & { items: ItemWithReservations[] };
 
 export async function getPointsWithItems(): Promise<PointWithItems[]> {
-  const allPoints = await db
-    .select()
-    .from(points)
-    .orderBy(desc(points.createdAt));
+  try {
+    const allPoints = await db
+      .select()
+      .from(points)
+      .orderBy(desc(points.createdAt), desc(points.id));
 
-  const allItems = await db.select().from(items).orderBy(asc(items.createdAt));
+    const allItems = await db
+      .select()
+      .from(items)
+      .orderBy(asc(items.createdAt), asc(items.id));
 
-  const allUsers = await db.select().from(users);
+    const allUsers = await db.select().from(users);
 
-  const allReservations = await db
-    .select()
-    .from(itemReservations)
-    .where(eq(itemReservations.status, "reserved"));
+    const allReservations = await db
+      .select()
+      .from(itemReservations)
+      .where(eq(itemReservations.status, "reserved"));
 
-  const itemsWithReservations: ItemWithReservations[] = allItems.map(
-    (item) => ({
-      ...item,
-      reservations: allReservations.filter((r) => r.itemId === item.id),
-    }),
-  );
+    const itemsWithReservations: ItemWithReservations[] = allItems.map(
+      (item) => ({
+        ...item,
+        reservations: allReservations.filter((r) => r.itemId === item.id),
+      }),
+    );
 
-  // 1. Relación con la tabla points (ítems asociados a un punto físico de ayuda)
-  const pointList: PointWithItems[] = allPoints.map((p) => ({
-    ...p,
-    items: itemsWithReservations.filter((i) => i.pointId === p.id),
-  }));
+    // 1. Relación con la tabla points (ítems asociados a un punto físico de ayuda)
+    const pointList: PointWithItems[] = allPoints.map((p) => ({
+      ...p,
+      items: itemsWithReservations.filter((i) => i.pointId === p.id),
+    }));
 
-  // 2. Relación con la tabla users (donaciones registradas por usuarios sin punto físico)
-  // Cada donación se lista de forma independiente sin agrupar por donante
-  const userItemsWithoutPoint = itemsWithReservations.filter(
-    (i) => i.pointId === null && i.userId !== null,
-  );
+    // 2. Relación con la tabla users (donaciones registradas por usuarios sin punto físico)
+    // Cada donación se lista de forma independiente sin agrupar por donante
+    const userItemsWithoutPoint = itemsWithReservations.filter(
+      (i) => i.pointId === null && i.userId !== null,
+    );
 
-  for (const item of userItemsWithoutPoint) {
-    const user = allUsers.find((u) => u.id === item.userId);
-    const donorName = user?.name || item.reservedBy || "Donante registrado";
-    const contactInfo =
-      user?.phone || user?.email || item.reservedByContact || null;
+    for (const item of userItemsWithoutPoint) {
+      const user = allUsers.find((u) => u.id === item.userId);
+      const donorName = user?.name || item.reservedBy || "Donante registrado";
+      const contactInfo =
+        user?.phone || user?.email || item.reservedByContact || null;
 
-    pointList.push({
-      id: -item.id, // ID negativo único por ítem
-      name: item.product, // Título: el artículo a donar
-      contact: donorName, // Nombre de la persona
-      note: item.detail
-        ? `${item.detail}${contactInfo ? ` • Contacto: ${contactInfo}` : ""}`
-        : contactInfo
-          ? `Contacto: ${contactInfo}`
-          : "Donación disponible para entrega inmediata.",
-      lat: 4.6097,
-      lng: -74.0817,
-      createdAt: item.createdAt || new Date(),
-      items: [item],
-    });
+      pointList.push({
+        id: -item.id, // ID negativo único por ítem
+        name: item.product, // Título: el artículo a donar
+        contact: donorName, // Nombre de la persona
+        note: item.detail
+          ? `${item.detail}${contactInfo ? ` • Contacto: ${contactInfo}` : ""}`
+          : contactInfo
+            ? `Contacto: ${contactInfo}`
+            : "Donación disponible para entrega inmediata.",
+        lat: 4.6097,
+        lng: -74.0817,
+        createdAt: item.createdAt || new Date(),
+        items: [item],
+      });
+    }
+
+    return pointList;
+  } catch (error) {
+    console.error("Error fetching points with items:", error);
+    return [];
   }
-
-  return pointList;
 }
 
 export async function createNeedsList(input: {

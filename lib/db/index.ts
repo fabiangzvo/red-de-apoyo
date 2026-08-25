@@ -16,7 +16,12 @@ export const pool =
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    keepAlive: true,
   });
+
+pool.on("error", (err) => {
+  console.error("Unexpected idle client error on pg pool", err);
+});
 
 if (process.env.NODE_ENV !== "production") globalForDb.pool = pool;
 

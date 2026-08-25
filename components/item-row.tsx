@@ -203,20 +203,22 @@ export function ItemRow({
             </span>
           </div>
 
-          {reserversCount > 0 && (reservedQty > 0 || status === "delivered") && (
-            <p className="mt-1.5 text-xs text-muted-foreground font-medium">
-              {status === "delivered"
-                ? item.isDonation
-                  ? "Entregado a "
-                  : "Entregado por "
-                : item.isDonation
-                  ? "Solicitado por "
-                  : "Reservado por "}
-              <span className="text-foreground font-semibold">
-                {reserversCount} {reserversCount === 1 ? "persona" : "personas"}
-              </span>
-            </p>
-          )}
+          {reserversCount > 0 &&
+            (reservedQty > 0 || status === "delivered") && (
+              <p className="mt-1.5 text-xs text-muted-foreground font-medium">
+                {status === "delivered"
+                  ? item.isDonation
+                    ? "Entregado a "
+                    : "Entregado por "
+                  : item.isDonation
+                    ? "Solicitado por "
+                    : "Reservado por "}
+                <span className="text-foreground font-semibold">
+                  {reserversCount}{" "}
+                  {reserversCount === 1 ? "persona" : "personas"}
+                </span>
+              </p>
+            )}
         </div>
       </div>
 
@@ -297,7 +299,18 @@ export function ItemRow({
         </p>
       )}
 
-      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      {error && (
+        <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg bg-destructive/5 border border-destructive/20 p-2.5 text-xs font-medium text-destructive">
+          <span>{error}</span>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-6 px-2 text-xs shrink-0"
+            onClick={() => setError(null)}>
+            Entendido
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

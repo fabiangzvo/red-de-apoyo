@@ -612,7 +612,7 @@ export function DonorOffersSection({
     }
   }, [session]);
 
-  // Filter only offers with available stock
+  // Keep all active & reserved offers in original list positions (only filter out fully delivered)
   const inStockOffers = useMemo(() => {
     return offers.filter((o) => {
       const status = getItemEffectiveStatus({
@@ -621,7 +621,7 @@ export function DonorOffersSection({
         quantityReserved: o.quantityReserved,
         isDonation: true,
       });
-      return status !== "delivered" && status !== "reserved";
+      return status !== "delivered";
     });
   }, [offers]);
 
@@ -665,16 +665,16 @@ export function DonorOffersSection({
       })
       .sort((a, b) => {
         if (sortBy === "title") {
-          return a.title.localeCompare(b.title);
+          return a.title.localeCompare(b.title) || b.id - a.id;
         }
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : a.id;
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : b.id;
 
         if (sortBy === "oldest") {
-          return timeA - timeB;
+          return timeA - timeB || a.id - b.id;
         }
         // default "newest"
-        return timeB - timeA;
+        return timeB - timeA || b.id - a.id;
       });
   }, [inStockOffers, searchQuery, selectedCategory, sortBy]);
 
