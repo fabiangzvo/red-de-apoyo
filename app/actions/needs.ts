@@ -208,6 +208,7 @@ export async function reserveItemQuantity(
 
   revalidatePath("/mapa");
   revalidatePath("/mis-donaciones");
+  revalidatePath("/ofertas");
 
   return { ok: true as const, reservation };
 }
@@ -252,6 +253,7 @@ export async function cancelReservation(reservationId: number) {
 
   revalidatePath("/mapa");
   revalidatePath("/mis-donaciones");
+  revalidatePath("/ofertas");
 
   return { ok: true as const };
 }
@@ -293,6 +295,7 @@ export async function releaseItem(itemId: number) {
 
   revalidatePath("/mapa");
   revalidatePath("/mis-donaciones");
+  revalidatePath("/ofertas");
   return { ok: true as const };
 }
 

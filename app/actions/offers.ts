@@ -117,6 +117,9 @@ export async function getDonorOffers() {
         status: item.status,
         createdAt: item.createdAt,
         quantity: item.quantity,
+        quantityReserved: item.quantityReserved,
+        reservedBy: item.reservedBy,
+        reservedByContact: item.reservedByContact,
       }));
     }
 

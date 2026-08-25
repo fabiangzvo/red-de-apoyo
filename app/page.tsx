@@ -7,19 +7,18 @@ import {
   HeartHandshake,
   PlusCircle,
   MapPin,
+  Gift,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { getPointsWithItems } from "@/app/actions/needs";
-import { getDonorOffers } from "@/app/actions/offers";
 import { LiveStatPanel } from "@/components/live-stat-panel";
-import { DonorOffersSection } from "@/components/donor-offers-section";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const points = await getPointsWithItems();
-  const donorOffers = await getDonorOffers();
   const allItems = points.flatMap((p) => p.items);
   const stats = {
     families: allItems.filter((i) => i.status !== "delivered").length,
@@ -111,8 +110,31 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Available Donor Offers */}
-        <DonorOffersSection offers={donorOffers} />
+        {/* Available Donor Offers Callout Banner */}
+        <section className="border-t border-border bg-primary/5 py-12">
+          <div className="mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary ">
+                <Gift className="size-3.5" />
+                Ofertas de Donantes
+              </span>
+              <h2 className="mt-2 font-display text-2xl font-bold tracking-tight md:text-3xl">
+                ¿Buscas donaciones directas disponibles?
+              </h2>
+              <p className="mt-1 text-muted-foreground text-sm max-w-xl">
+                Explora las ofertas con búsqueda y filtros de alimentos, salud,
+                medicinas y materiales ofrecidos por la comunidad.
+              </p>
+            </div>
+            <Button
+              size="lg"
+              className=" shrink-0 font-medium"
+              render={<Link href="/ofertas" />}>
+              Ver ofertas de donantes
+              <ArrowRight className="ml-2 size-4" />
+            </Button>
+          </div>
+        </section>
 
         {/* Status system */}
         <section className="border-t border-border bg-card/40">
@@ -147,7 +169,6 @@ export default async function HomePage() {
           </div>
         </section>
       </main>
-
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row">
