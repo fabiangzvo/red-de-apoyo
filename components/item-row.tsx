@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
-import { categoryLabel, type ItemStatus } from "@/lib/constants";
+import { categoryLabel, categoryColor, type ItemStatus } from "@/lib/constants";
 import {
   deliverItem,
   releaseItem,
@@ -28,6 +28,7 @@ export function ItemRow({
   onRefresh,
   isOwner = false,
   pointId,
+  canDelete = false,
 }: {
   item: Item;
   volunteerName: string;
@@ -36,6 +37,7 @@ export function ItemRow({
   onRefresh: () => void;
   isOwner: boolean;
   pointId: number;
+  canDelete?: boolean;
 }) {
   const status = item.status as ItemStatus;
   const [pending, startTransition] = useTransition();
@@ -96,12 +98,16 @@ export function ItemRow({
         <div className="min-w-0 w-full">
           <div className="flex items-center gap-2 justify-between w-full">
             <div className="flex items-center gap-2">
-              <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+              <span
+                className={cn(
+                  "rounded-md border px-2 py-0.5 text-xs font-semibold shadow-xs",
+                  categoryColor(item.category),
+                )}>
                 {categoryLabel(item.category)}
               </span>
               <StatusBadge status={status} />
             </div>
-            {isOwner && status !== "delivered" && (
+            {canDelete && status !== "delivered" && (
               <Button variant="ghost" size="icon-sm" onClick={handleRemoveItem}>
                 <Trash2 className="size-4" aria-hidden />
               </Button>
@@ -131,64 +137,67 @@ export function ItemRow({
             </span>
           </div>
 
-          {item.reservedBy && (status === "reserved" || status === "delivered") && (
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {status === "delivered"
-                ? item.isDonation
-                  ? "Entregado a "
-                  : "Entregado por "
-                : item.isDonation
-                  ? "Solicitado por "
-                  : "Reservado por "}
-              <span className="font-medium text-foreground">
-                {item.reservedBy}
-              </span>
-              {item.reservedByContact && (
-                <span className="ml-1 text-muted-foreground">
-                  ({item.reservedByContact})
+          {item.reservedBy &&
+            (status === "reserved" || status === "delivered") && (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {status === "delivered"
+                  ? item.isDonation
+                    ? "Entregado a "
+                    : "Entregado por "
+                  : item.isDonation
+                    ? "Solicitado por "
+                    : "Reservado por "}
+                <span className="font-medium text-foreground">
+                  {item.reservedBy}
                 </span>
-              )}
-            </p>
-          )}
+                {item.reservedByContact && (
+                  <span className="ml-1 text-muted-foreground">
+                    ({item.reservedByContact})
+                  </span>
+                )}
+              </p>
+            )}
         </div>
       </div>
 
-      {(status === "pending" || status === "available") && availableQty > 0 && !isOwner && (
-        <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border/80 bg-muted/30 p-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <label className="text-xs font-medium text-muted-foreground">
-              Cantidad a solicitar (Máx: {availableQty})
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={availableQty}
-              value={requestQty}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                if (isNaN(val)) setRequestQty(1);
-                else setRequestQty(Math.min(availableQty, Math.max(1, val)));
-              }}
-              className="w-20 rounded-md border border-input bg-background px-2.5 py-1 text-right text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
+      {(status === "pending" || status === "available") &&
+        availableQty > 0 &&
+        !isOwner && (
+          <div className="mt-3 flex flex-col gap-2 rounded-lg border border-primary/50 bg-primary/10 p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-medium">
+                Cantidad a solicitar (Máx: {availableQty})
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={availableQty}
+                value={requestQty}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (isNaN(val)) setRequestQty(1);
+                  else setRequestQty(Math.min(availableQty, Math.max(1, val)));
+                }}
+                className="w-20 rounded-md border border-input bg-background px-2.5 py-1 text-right text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
 
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={() => handleReserveQuantity(requestQty)}
-            disabled={pending || availableQty <= 0}>
-            {pending ? (
-              <LoaderCircle className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <HandHeart className="size-4" aria-hidden />
-            )}
-            {item.isDonation || status === "available"
-              ? `Solicitar ${requestQty} ${requestQty === 1 ? "unidad" : "unidades"}`
-              : `Me encargo de ${requestQty} ${requestQty === 1 ? "unidad" : "unidades"}`}
-          </Button>
-        </div>
-      )}
+            <Button
+              size="sm"
+              className="w-full"
+              onClick={() => handleReserveQuantity(requestQty)}
+              disabled={pending || availableQty <= 0}>
+              {pending ? (
+                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <HandHeart className="size-4" aria-hidden />
+              )}
+              {item.isDonation || status === "available"
+                ? `Solicitar ${requestQty} ${requestQty === 1 ? "unidad" : "unidades"}`
+                : `Me encargo de ${requestQty} ${requestQty === 1 ? "unidad" : "unidades"}`}
+            </Button>
+          </div>
+        )}
 
       {status === "reserved" && isCurrentUserReserved && (
         <div className="mt-3 grid grid-cols-2 gap-2">

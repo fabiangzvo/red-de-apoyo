@@ -284,7 +284,7 @@ export async function releaseItem(itemId: number) {
       reservedByContact: null,
       reservedAt: null,
     })
-    .where(and(eq(items.id, itemId), eq(items.status, "reserved")));
+    .where(eq(items.id, itemId));
 
   await db
     .update(itemReservations)
@@ -292,6 +292,7 @@ export async function releaseItem(itemId: number) {
     .where(eq(itemReservations.itemId, itemId));
 
   revalidatePath("/mapa");
+  revalidatePath("/mis-donaciones");
   return { ok: true as const };
 }
 

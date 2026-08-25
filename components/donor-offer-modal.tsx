@@ -40,7 +40,7 @@ type DraftOfferItem = {
   id: string;
   category: string;
   product: string;
-  quantity: number;
+  quantity: number | "";
   detail: string;
 };
 
@@ -103,7 +103,10 @@ export function DonorOfferModal({
             id: String(initialData.id),
             category: initialData.category || "alimentos",
             product: initialData.title || "",
-            quantity: initialData.quantity && initialData.quantity > 0 ? initialData.quantity : 1,
+            quantity:
+              initialData.quantity && initialData.quantity > 0
+                ? initialData.quantity
+                : 1,
             detail: initialData.detail || "",
           },
         ]);
@@ -162,7 +165,7 @@ export function DonorOfferModal({
         const res = await updateDonorOffer(initialData.id, {
           category: item.category,
           title: item.product.trim(),
-          quantity: item.quantity,
+          quantity: Number(item.quantity) || 1,
           detail: item.detail.trim() || undefined,
           locationName: locationName.trim() || undefined,
         });
@@ -184,7 +187,7 @@ export function DonorOfferModal({
             createDonorOffer({
               category: item.category,
               title: item.product.trim(),
-              quantity: item.quantity,
+              quantity: Number(item.quantity) || 1,
               detail: item.detail.trim() || undefined,
               locationName: locationName.trim() || undefined,
             }),
@@ -362,11 +365,23 @@ export function DonorOfferModal({
                             type="number"
                             min={1}
                             value={item.quantity}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const val = e.target.value;
                               updateItem(item.id, {
-                                quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
-                              })
-                            }
+                                quantity:
+                                  val === ""
+                                    ? ""
+                                    : Math.max(1, parseInt(val, 10) || 1),
+                              });
+                            }}
+                            onBlur={() => {
+                              if (
+                                item.quantity === "" ||
+                                item.quantity < 1
+                              ) {
+                                updateItem(item.id, { quantity: 1 });
+                              }
+                            }}
                             className={inputCls}
                           />
                         </Field>

@@ -75,7 +75,7 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
             ) : session?.user ? (
               <>
                 <Button
-                  variant="tertiary"
+                  variant={session?.user ? "default" : "tertiary"}
                   size="sm"
                   render={<Link href="/mapa" />}
                   className="py-4 max-lg:hidden">
@@ -83,13 +83,15 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
                   <span>Ver mapa</span>
                 </Button>
 
-                <Button
-                  size="sm"
-                  render={<Link href="/solicitar" />}
-                  className="py-4 max-lg:hidden">
-                  <PlusCircle className="size-4" aria-hidden />
-                  Solicitar ayuda
-                </Button>
+                {!session?.user && (
+                  <Button
+                    size="sm"
+                    render={<Link href="/solicitar" />}
+                    className="py-4 max-lg:hidden">
+                    <PlusCircle className="size-4" aria-hidden />
+                    Solicitar ayuda
+                  </Button>
+                )}
 
                 <div className="relative">
                   <Button
@@ -179,13 +181,15 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
                     <span>Ver mapa</span>
                   </Button>
 
-                  <Button
-                    size="sm"
-                    render={<Link href="/solicitar" />}
-                    className="py-4">
-                    <PlusCircle className="size-4" aria-hidden />
-                    Solicitar ayuda
-                  </Button>
+                  {!session?.user && (
+                    <Button
+                      size="sm"
+                      render={<Link href="/solicitar" />}
+                      className="py-4">
+                      <PlusCircle className="size-4" aria-hidden />
+                      Solicitar ayuda
+                    </Button>
+                  )}
 
                   <Button
                     variant="outline"

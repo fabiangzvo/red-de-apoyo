@@ -1,7 +1,8 @@
 "use client";
 
 import { Gift, MapPin, Phone, User, CheckCircle } from "lucide-react";
-import { categoryLabel } from "@/lib/constants";
+import { categoryLabel, categoryColor } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { DonorOffer } from "@/lib/db/schema";
 
 export function DonorOffersSection({ offers }: { offers: DonorOffer[] }) {
@@ -33,7 +34,11 @@ export function DonorOffersSection({ offers }: { offers: DonorOffer[] }) {
             >
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-md bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span
+                    className={cn(
+                      "rounded-md border px-2.5 py-0.5 text-xs font-semibold",
+                      categoryColor(offer.category),
+                    )}>
                     {categoryLabel(offer.category)}
                   </span>
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">

@@ -62,9 +62,9 @@ export function LiveStatPanel({ stats }: { stats: Stats }) {
           />
         </div>
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
-          className="mt-6 w-full justify-between bg-secondary/10 py-5"
+          className="mt-6 w-full justify-between bg-secondary/10 py-5 hover:bg-secondary/30 transition-colors"
           render={<Link href="/mapa" />}>
           Ver el mapa de ayuda
           <ArrowRight className="size-4" aria-hidden />

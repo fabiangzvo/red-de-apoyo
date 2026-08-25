@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default async function MapaPage() {
   const points = await getPointsWithItems();
-  console.log(JSON.stringify(points));
+
   return (
     <div className="flex min-h-svh flex-col">
       <SiteHeader active="mapa" />

@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { SiteHeader } from "@/components/site-header";
 import { RequestHelpForm } from "@/components/request-help-form";
 
@@ -8,7 +11,12 @@ export const metadata: Metadata = {
     "Fija tu ubicación y construye tu lista de necesidades ítem por ítem para que los donantes puedan ayudarte.",
 };
 
-export default function SolicitarPage() {
+export default async function SolicitarPage() {
+  const session = await getServerSession(authOptions);
+
+  if (session?.user) {
+    redirect("/mapa");
+  }
   return (
     <div className="flex min-h-svh flex-col">
       <SiteHeader active="solicitar" />

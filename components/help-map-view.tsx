@@ -339,9 +339,11 @@ function PointList({
           <button
             key={p.id}
             onClick={() => onSelect(p.id)}
-            className="w-full rounded-xl border border-border bg-background p-3.5 text-left transition-colors hover:border-secondary hover:bg-muted/40 ">
+            className="w-full rounded-xl border border-border bg-background p-3.5 text-left transition-colors hover:border-primary/80 hover:cursor-pointer group hover:shadow-md hover:shadow-primary/10 ">
             <div className="flex items-start justify-between gap-2">
-              <span className="font-medium">{p.name}</span>
+              <span className="font-medium group-hover:text-primary">
+                {p.name}
+              </span>
               {p.distance != null && (
                 <span className="shrink-0 text-xs font-medium text-muted-foreground">
                   {p.distance < 1
@@ -468,10 +470,10 @@ function PointDetail({
       )}
 
       {session?.user ? (
-        <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/10 p-3 text-xs">
+        <div className="flex items-center gap-3 rounded-lg border shadow-md shadow-primary/10 bg-background p-3 text-xs">
           <UserCheck className="size-5 text-primary shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground truncate">
+            <p className="font-semibold text-primary truncate">
               {session.user.name || "Donante Autenticado"}
             </p>
             <p className="text-muted-foreground truncate text-[11px]">
@@ -538,14 +540,26 @@ function PointDetail({
 
       <div className="flex flex-col gap-2.5">
         {point.items.map((item) => {
-          const currentUserId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+          const currentUserId = session?.user?.id
+            ? parseInt(session.user.id, 10)
+            : null;
           const isItemOwner =
-            point.contact === volunteerContact ||
-            item.reservedByContact === volunteerContact ||
-            (Boolean(session?.user) &&
-              (item.userId === currentUserId ||
-                point.contact === session?.user?.name));
+            !!point.contact &&
+            !!volunteerContact &&
+            (point.contact === volunteerContact ||
+              item.reservedByContact === volunteerContact ||
+              (Boolean(session?.user) &&
+                (item.userId === currentUserId ||
+                  point.contact === session?.user?.phone)));
 
+          console.log(
+            isItemOwner,
+            volunteerContact,
+            item.userId,
+            item,
+            point,
+            session?.user,
+          );
           return (
             <ItemRow
               key={item.id}
@@ -556,6 +570,7 @@ function PointDetail({
               onRefresh={onRefresh}
               isOwner={isItemOwner}
               pointId={point.id}
+              canDelete={point.contact === volunteerContact}
             />
           );
         })}
@@ -584,7 +599,7 @@ function FilterChip({
         "rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
         active
           ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-background text-muted-foreground hover:bg-muted",
+          : "border-border bg-background hover:text-primary hover:bg-primary/20 hover:cursor-pointer",
       )}>
       {children}
     </button>

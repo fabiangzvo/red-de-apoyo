@@ -36,7 +36,8 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { CATEGORIES, categoryLabel } from "@/lib/constants";
+import { CATEGORIES, categoryLabel, categoryColor } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { deleteDonorOffer } from "@/app/actions/offers";
 import { DonorOfferModal } from "@/components/donor-offer-modal";
 
@@ -332,7 +333,11 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
                           {item.title}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                              categoryColor(item.category),
+                            )}>
                             {categoryLabel(item.category)}
                           </span>
                         </td>
