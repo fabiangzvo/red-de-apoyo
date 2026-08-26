@@ -155,11 +155,7 @@ export function ItemRow({
     error !== "Este producto ya se encuentra completamente reservado.";
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border bg-background p-3.5",
-        status === "delivered" && "opacity-70",
-      )}>
+    <div className="rounded-xl border border-border bg-background p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 w-full">
           <div className="flex items-center gap-2 justify-between w-full">

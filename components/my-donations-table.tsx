@@ -359,7 +359,7 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
         onOpenChange={(open) => !open && setItemToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar oferta de donación?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar producto de donación?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará la ayuda{" "}
               <strong className="text-foreground">{itemToDelete?.title}</strong>{" "}

@@ -130,18 +130,18 @@ export default async function HomePage() {
           <div className="mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex-1">
               <h2 className="mt-3 font-display text-2xl font-bold tracking-tight md:text-3xl">
-                ¿Buscas donaciones directas disponibles?
+                ¿Buscas donaciones?
               </h2>
               <p className="mt-1.5 text-muted-foreground text-sm max-w-xl leading-relaxed">
-                Explora las ofertas con búsqueda y filtros de alimentos, salud,
-                medicinas y materiales ofrecidos por la comunidad.
+                Explora las donaciones con búsqueda y filtros de alimentos,
+                salud, medicinas y materiales ofrecidos por la comunidad.
               </p>
               <div className="mt-6">
                 <Button
                   size="lg"
                   className="font-medium h-11 px-6 shadow-md shadow-primary/20"
                   render={<Link href="/ofertas" />}>
-                  Ver ofertas de donantes
+                  Ver productos de donantes
                   <ArrowRight className="ml-2 size-4" />
                 </Button>
               </div>
@@ -284,7 +284,7 @@ function PathCard({
       </ol>
       <Button
         className="mt-6 w-full py-5"
-        variant={tone === "primary" ? "default" : "outline"}
+        variant={tone === "primary" ? "default" : "tertiary"}
         render={<Link href={cta.href} />}>
         <cta.Icon className="size-4" aria-hidden />
         {cta.label}

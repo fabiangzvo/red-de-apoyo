@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusCircle } from "lucide-react";
+import { HandHeart, PlusCircle } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { EmptyState, HelpMapView } from "@/components/help-map-view";
@@ -16,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function MapaPage() {
+  const session = await getServerSession(authOptions);
   const points = await getPointsWithItems();
 
   return (
@@ -31,10 +34,18 @@ export default async function MapaPage() {
               Elige a quién apoyar y encárgate de los ítems que puedas entregar.
             </p>
           </div>
-          <Button variant="outline" render={<Link href="/solicitar" />}>
-            <PlusCircle className="size-4" aria-hidden />
-            Solicitar ayuda
-          </Button>
+          {!session?.user && (
+            <div className="flex gap-2">
+              <Button variant="outline" render={<Link href="/mis-solicitudes" />}>
+                <HandHeart className="size-4 text-primary" aria-hidden />
+                Mis solicitudes
+              </Button>
+              <Button render={<Link href="/solicitar" />}>
+                <PlusCircle className="size-4" aria-hidden />
+                Solicitar ayuda
+              </Button>
+            </div>
+          )}
         </div>
 
         {points.length === 0 ? (

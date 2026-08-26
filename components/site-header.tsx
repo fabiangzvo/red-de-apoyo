@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import {
   HeartHandshake,
+  HandHeart,
   MapPinned,
   PlusCircle,
   LogIn,
@@ -19,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/auth-modal";
 import { DonorOfferModal } from "@/components/donor-offer-modal";
-import { cn } from "@/lib/utils";
 
 export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
   const { data: session, status } = useSession();
@@ -46,7 +46,7 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
     setMobileMenuOpen(false);
     signOut();
   };
-
+  console.log(session);
   return (
     <>
       <header className="sticky top-0 z-[1100] border-b border-border bg-background/85 backdrop-blur-md">
@@ -180,17 +180,15 @@ export function SiteHeader({ active }: { active?: "solicitar" | "mapa" }) {
                     <MapPinned className="size-4" aria-hidden />
                     <span>Ver mapa</span>
                   </Button>
-
                   {!session?.user && (
                     <Button
                       size="sm"
                       render={<Link href="/solicitar" />}
-                      className="py-4">
+                      className="py-4 max-lg:hidden">
                       <PlusCircle className="size-4" aria-hidden />
                       Solicitar ayuda
                     </Button>
                   )}
-
                   <Button
                     variant="outline"
                     size="sm"

@@ -10,7 +10,7 @@ import {
   type ItemReservation,
   type Point,
 } from "@/lib/db/schema";
-import { and, asc, desc, eq, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export type NewItemInput = {
@@ -477,6 +477,7 @@ export async function deliverItem(itemId: number, contactInfo?: string) {
   revalidatePath("/mapa");
   revalidatePath("/mis-donaciones");
   revalidatePath("/ofertas");
+  revalidatePath("/mis-solicitudes");
   return { ok: true as const };
 }
 
@@ -498,5 +499,238 @@ export async function removeItem(pointId: number, itemId: number) {
   }
 
   revalidatePath("/mapa");
+  revalidatePath("/mis-solicitudes");
   return { ok: true as const };
+}
+
+export type RequestedItemData = {
+  reservationId: number;
+  itemId: number;
+  pointId: number | null;
+  quantityReserved: number;
+  reservationStatus: string;
+  createdAt: string | null;
+  userReservationName: string;
+  userReservationContact: string;
+  product: string;
+  category: string;
+  detail: string | null;
+  itemStatus: string;
+  isDonation: boolean;
+  isMapRequest: boolean;
+  totalQuantity: number;
+  providerName: string;
+  providerContact: string;
+  locationName: string | null;
+};
+
+export async function getUserRequestedItems(
+  contacts: string[],
+): Promise<RequestedItemData[]> {
+  const validContacts = Array.from(
+    new Set(contacts.map((c) => c.trim()).filter(Boolean)),
+  );
+
+  if (validContacts.length === 0) {
+    return [];
+  }
+
+  try {
+    // 1. Fetch item_reservations (reservations made by user on donor offers or map items)
+    const reservations = await db
+      .select({
+        reservationId: itemReservations.id,
+        itemId: itemReservations.itemId,
+        quantity: itemReservations.quantity,
+        status: itemReservations.status,
+        createdAt: itemReservations.createdAt,
+        userReservationName: itemReservations.name,
+        userReservationContact: itemReservations.contact,
+        // Item fields
+        product: items.product,
+        category: items.category,
+        detail: items.detail,
+        itemStatus: items.status,
+        isDonation: items.isDonation,
+        totalQuantity: items.quantity,
+        quantityReserved: items.quantityReserved,
+        reservedBy: items.reservedBy,
+        reservedByContact: items.reservedByContact,
+        pointId: items.pointId,
+        userId: items.userId,
+      })
+      .from(itemReservations)
+      .innerJoin(items, eq(itemReservations.itemId, items.id))
+      .where(
+        and(
+          inArray(itemReservations.contact, validContacts),
+          ne(itemReservations.status, "cancelled"),
+        ),
+      )
+      .orderBy(desc(itemReservations.createdAt), desc(itemReservations.id));
+
+    const reservedItemIds = new Set(reservations.map((r) => r.itemId));
+
+    // Gather user IDs for registered donors
+    const userIds = Array.from(
+      new Set(
+        reservations
+          .map((r) => r.userId)
+          .filter((id): id is number => id !== null),
+      ),
+    );
+
+    const usersList =
+      userIds.length > 0
+        ? await db.select().from(users).where(inArray(users.id, userIds))
+        : [];
+    const usersMap = new Map(usersList.map((u) => [u.id, u]));
+
+    const reservationPointIds = Array.from(
+      new Set(
+        reservations
+          .map((r) => r.pointId)
+          .filter((id): id is number => id !== null),
+      ),
+    );
+
+    const reservationPointsList =
+      reservationPointIds.length > 0
+        ? await db
+            .select()
+            .from(points)
+            .where(inArray(points.id, reservationPointIds))
+        : [];
+    const reservationPointsMap = new Map(
+      reservationPointsList.map((p) => [p.id, p]),
+    );
+
+    const reservationResults: RequestedItemData[] = reservations.map((r) => {
+      let providerName = "Donante registrado";
+      let providerContact = "No especificado";
+      let locationName: string | null = null;
+
+      if (r.pointId && reservationPointsMap.has(r.pointId)) {
+        const pt = reservationPointsMap.get(r.pointId)!;
+        locationName = pt.note || "Ubicación en el mapa";
+      }
+
+      if (r.isDonation) {
+        // 1. Resolve from registered user account if userId exists
+        if (r.userId && usersMap.has(r.userId)) {
+          const u = usersMap.get(r.userId)!;
+          providerName = u.name || providerName;
+          providerContact = u.phone || u.email || providerContact;
+        } else if (r.reservedBy || r.reservedByContact) {
+          if (r.reservedBy) providerName = r.reservedBy;
+          if (r.reservedByContact) providerContact = r.reservedByContact;
+        } else if (r.pointId && reservationPointsMap.has(r.pointId)) {
+          const pt = reservationPointsMap.get(r.pointId)!;
+          providerName = pt.name || providerName;
+          providerContact = pt.contact || providerContact;
+        }
+      } else {
+        // It's a help request published on the map (isDonation === false)
+        if (r.reservedBy) {
+          providerName = `Voluntario: ${r.reservedBy}`;
+          providerContact = r.reservedByContact || "";
+        } else {
+          providerName = "En espera de voluntario";
+          providerContact = "";
+        }
+      }
+
+      return {
+        reservationId: r.reservationId,
+        itemId: r.itemId,
+        pointId: r.pointId,
+        quantityReserved: r.quantity,
+        reservationStatus: r.status,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : null,
+        userReservationName: r.userReservationName,
+        userReservationContact: r.userReservationContact,
+        product: r.product,
+        category: r.category,
+        detail: r.detail,
+        itemStatus: r.itemStatus,
+        isDonation: r.isDonation,
+        isMapRequest: !r.isDonation,
+        totalQuantity: r.totalQuantity,
+        providerName,
+        providerContact,
+        locationName,
+      };
+    });
+
+    // 2. Fetch help requests created by the user on points (where points.contact in validContacts)
+    const userPoints = await db
+      .select()
+      .from(points)
+      .where(inArray(points.contact, validContacts));
+
+    const userPointIds = userPoints.map((p) => p.id);
+    let mapRequestResults: RequestedItemData[] = [];
+
+    if (userPointIds.length > 0) {
+      const userPointItems = await db
+        .select()
+        .from(items)
+        .where(
+          and(
+            inArray(items.pointId, userPointIds),
+            eq(items.isDonation, false),
+          ),
+        )
+        .orderBy(desc(items.createdAt), desc(items.id));
+
+      const pointsMap = new Map(userPoints.map((p) => [p.id, p]));
+
+      mapRequestResults = userPointItems
+        .filter((i) => !reservedItemIds.has(i.id))
+        .map((i) => {
+          const pt = i.pointId ? pointsMap.get(i.pointId) : null;
+          const status =
+            i.status === "delivered"
+              ? "delivered"
+              : i.quantityReserved > 0 || i.status === "reserved"
+                ? "reserved"
+                : "pending";
+
+          return {
+            reservationId: -i.id,
+            itemId: i.id,
+            pointId: i.pointId,
+            quantityReserved: i.quantity,
+            reservationStatus: status,
+            createdAt: i.createdAt ? new Date(i.createdAt).toISOString() : null,
+            userReservationName: pt?.name || "Solicitante",
+            userReservationContact: pt?.contact || validContacts[0],
+            product: i.product,
+            category: i.category,
+            detail: i.detail,
+            itemStatus: i.status,
+            isDonation: false,
+            isMapRequest: true,
+            totalQuantity: i.quantity,
+            providerName: i.reservedBy
+              ? `Voluntario: ${i.reservedBy}`
+              : "Punto de ayuda en mapa",
+            providerContact: i.reservedByContact || "En espera de voluntario",
+            locationName: pt?.note || "Ubicación en mapa",
+          };
+        });
+    }
+
+    const combined = [...reservationResults, ...mapRequestResults];
+    combined.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    return combined;
+  } catch (error) {
+    console.error("Error fetching user requested items:", error);
+    return [];
+  }
 }

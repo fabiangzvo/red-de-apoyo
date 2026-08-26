@@ -36,9 +36,15 @@ import {
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import type { DonorOffer, ItemReservation } from "@/lib/db/schema";
-import { reserveItemQuantity, releaseItem, deliverItem } from "@/app/actions/needs";
+import {
+  reserveItemQuantity,
+  releaseItem,
+  deliverItem,
+} from "@/app/actions/needs";
 
 export interface DonorOfferExtended extends DonorOffer {
   quantityReserved?: number | null;
@@ -341,8 +347,7 @@ function OfferCard({
     (r) =>
       r.contact === volunteerContact.trim() ||
       (session?.user &&
-        (r.contact === session.user.phone ||
-          r.contact === session.user.email)),
+        (r.contact === session.user.phone || r.contact === session.user.email)),
   );
 
   const userReservedQty =
@@ -391,11 +396,7 @@ function OfferCard({
 
   return (
     <>
-      <div
-        className={cn(
-          "flex flex-col justify-between rounded-xl border border-border bg-background p-3.5 shadow-xs transition-all hover:border-primary/80 hover:shadow-md hover:shadow-primary/10",
-          status === "delivered" && "opacity-70",
-        )}>
+      <div className="flex flex-col justify-between rounded-xl border border-border bg-background p-3.5 shadow-xs transition-all hover:border-primary/80 hover:shadow-md hover:shadow-primary/10">
         <div>
           {/* Header tags: Category pill + StatusBadge */}
           <div className="flex items-center gap-2 justify-between w-full">
@@ -412,11 +413,7 @@ function OfferCard({
           </div>
 
           {/* Title */}
-          <p
-            className={cn(
-              "mt-2 font-medium text-foreground",
-              status === "delivered" && "line-through decoration-delivered/60",
-            )}>
+          <p className={cn("mt-2 font-medium text-foreground")}>
             {offer.title}
           </p>
 
@@ -426,25 +423,10 @@ function OfferCard({
               {offer.detail}
             </p>
           )}
-
-          {/* Quantities Stock Info */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-              Disponibles: {availableQty}
-            </span>
-            {reservedQty > 0 && (
-              <span className="inline-flex items-center gap-1 font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                Reservadas: {reservedQty}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1 text-muted-foreground text-[11px]">
-              Total Stock: {totalQty}
-            </span>
-          </div>
         </div>
 
         {/* Donor details & Action Button */}
-        <div className="mt-4 pt-3 border-t border-border space-y-3">
+        <div className="mt-4 pt-3 space-y-3">
           {/* Donor info */}
           <div className="space-y-1 text-xs text-muted-foreground">
             <div className="flex items-center justify-between gap-2">
@@ -470,9 +452,74 @@ function OfferCard({
               </div>
             )}
           </div>
+          {/* Quantities Stock Info */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs border-t border-border pt-3">
+            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+              Disponibles: {availableQty}
+            </span>
+            {reservedQty > 0 && (
+              <span className="inline-flex items-center gap-1 font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
+                Reservadas: {reservedQty}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 text-muted-foreground text-[11px]">
+              Total Stock: {totalQty}
+            </span>
+          </div>
+
+          {reserversCount > 0 &&
+            (reservedQty > 0 || status === "delivered") && (
+              <div className="mt-2 text-xs text-muted-foreground font-medium">
+                Solicitado por{" "}
+                <span className="text-foreground font-semibold">
+                  {reserversCount}{" "}
+                  {reserversCount === 1 ? "persona" : "personas"}
+                </span>
+              </div>
+            )}
+
+          {reservedQty > 0 && isCurrentUserReserved && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="h-8 text-xs gap-1.5 font-medium flex-1"
+                  onClick={handleDeliver}
+                  disabled={pending}>
+                  {pending ? (
+                    <LoaderCircle className="size-3.5 animate-spin" />
+                  ) : (
+                    <CircleCheckBig className="size-3.5" />
+                  )}
+                  Marcar recibido
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1.5 font-medium flex-1"
+                  onClick={handleRelease}
+                  disabled={pending}>
+                  {pending ? (
+                    <LoaderCircle className="size-3.5 animate-spin" />
+                  ) : (
+                    <Undo2 className="size-3.5" />
+                  )}
+                  Cancelar solicitud
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Has solicitado {userReservedQty}{" "}
+                {userReservedQty === 1 ? "unidad" : "unidades"}. El donante se
+                pondrá en contacto contigo.
+              </p>
+            </div>
+          )}
 
           {/* Request Button -> triggers Modal */}
-          {status !== "delivered" && status !== "reserved" && availableQty > 0 && !isCurrentUserReserved && (
+          {status !== "delivered" &&
+            status !== "reserved" &&
+            availableQty > 0 &&
+            !isCurrentUserReserved && (
               <Button
                 size="sm"
                 className="w-full gap-2 mt-2 font-medium"
@@ -481,70 +528,6 @@ function OfferCard({
                 Solicitar ayuda
               </Button>
             )}
-
-          {reserversCount > 0 && (reservedQty > 0 || status === "delivered") && (
-            <div className="mt-2 text-xs text-muted-foreground font-medium">
-              Solicitado por{" "}
-              <span className="text-foreground font-semibold">
-                {reserversCount} {reserversCount === 1 ? "persona" : "personas"}
-              </span>
-            </div>
-          )}
-
-          {reservedQty > 0 && (
-            <div className="rounded-lg border border-border bg-muted/40 p-2.5 text-xs space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-foreground">
-                  Ítem Reservado
-                </span>
-                {isCurrentUserReserved && (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs px-2 gap-1"
-                      onClick={handleDeliver}
-                      disabled={pending}>
-                      {pending ? (
-                        <LoaderCircle className="size-3 animate-spin" />
-                      ) : (
-                        <CircleCheckBig className="size-3" />
-                      )}
-                      Marcar recibido
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs px-2 gap-1"
-                      onClick={handleRelease}
-                      disabled={pending}>
-                      {pending ? (
-                        <LoaderCircle className="size-3 animate-spin" />
-                      ) : (
-                        <Undo2 className="size-3" />
-                      )}
-                      Cancelar
-                    </Button>
-                  </div>
-                )}
-              </div>
-              {offer.reservedBy && (
-                <p className="text-muted-foreground text-[11px]">
-                  Solicitado por:{" "}
-                  <span className="font-medium text-foreground">
-                    {offer.reservedBy}
-                  </span>
-                  {offer.reservedByContact && ` (${offer.reservedByContact})`}
-                </p>
-              )}
-            </div>
-          )}
-
-          {status === "delivered" && (
-            <div className="rounded-lg border border-border bg-muted/40 p-2 text-xs text-muted-foreground flex items-center gap-1.5">
-              <CircleCheckBig className="size-3.5 text-emerald-500" />
-              <span>Esta ayuda ya ha sido entregada.</span>
-            </div>
-          )}
 
           {error && <p className="text-xs text-destructive mt-1">{error}</p>}
         </div>
@@ -573,6 +556,9 @@ export function DonorOffersSection({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title">("newest");
+  const [statusFilter, setStatusFilter] = useState<
+    "available" | "reserved" | "delivered" | "all"
+  >("available");
 
   // Requester details stored in state and persisted in localStorage under userRequesting
   const [volunteerName, setVolunteerName] = useState(() => {
@@ -612,7 +598,7 @@ export function DonorOffersSection({
     }
   }, [session]);
 
-  // Keep all active & reserved offers in original list positions (only filter out fully delivered)
+  // Filter offers by status filter
   const inStockOffers = useMemo(() => {
     return offers.filter((o) => {
       const status = getItemEffectiveStatus({
@@ -621,9 +607,12 @@ export function DonorOffersSection({
         quantityReserved: o.quantityReserved,
         isDonation: true,
       });
-      return status !== "delivered";
+      if (statusFilter === "available") return status === "available";
+      if (statusFilter === "reserved") return status === "reserved";
+      if (statusFilter === "delivered") return status === "delivered";
+      return true; // "all"
     });
-  }, [offers]);
+  }, [offers, statusFilter]);
 
   // Calculate category counts for in-stock offers
   const categoryCounts = useMemo(() => {
@@ -681,12 +670,14 @@ export function DonorOffersSection({
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     selectedCategory !== "all" ||
-    sortBy !== "newest";
+    sortBy !== "newest" ||
+    statusFilter !== "available";
 
   const clearFilters = () => {
     setSearchQuery("");
     setSelectedCategory("all");
     setSortBy("newest");
+    setStatusFilter("available");
   };
 
   return (
@@ -699,27 +690,23 @@ export function DonorOffersSection({
         {/* Header section */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              <Gift className="size-3.5" />
-              Ofertas de Donantes
-            </span>
             <h1 className="mt-2 font-display text-2xl font-bold tracking-tight md:text-3xl">
               Ayudas y recursos ofrecidos por la comunidad
             </h1>
             <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-              Explora las donaciones directas con stock disponible. Utiliza los
-              filtros de búsqueda para encontrar e ingresar tus datos para
-              reservar insumos específicos.
+              Explora las donaciones con stock disponible. Utiliza los filtros
+              de búsqueda para encontrar e ingresar tus datos para reservar
+              insumos específicos.
             </p>
           </div>
         </div>
 
         {/* Filters Controls Panel */}
         <div className="mt-6 bg-card/80 p-4 md:p-5 space-y-4">
-          {/* Top Row: Search Input + Sort Dropdown */}
+          {/* Top Row: Search Input + Status Dropdown + Sort Dropdown */}
           <div className="grid gap-3 md:grid-cols-12">
             {/* Search Input */}
-            <div className="relative md:col-span-8 lg:col-span-9">
+            <div className="relative md:col-span-6 lg:col-span-6">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <input
                 type="text"
@@ -739,10 +726,50 @@ export function DonorOffersSection({
               )}
             </div>
 
-            {/* Sort Dropdown Menu */}
-            <div className="flex justify-end items-center md:col-span-4 lg:col-span-3">
+            {/* Status Filter Dropdown Menu */}
+            <div className="flex justify-end items-center md:col-span-3 lg:col-span-3">
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex h-10 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary/20 hover:text-primary hover:border-primary/20 outline-none cursor-pointer">
+                <DropdownMenuTrigger className="group flex h-10 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary/20 hover:text-primary hover:!border-primary/20 outline-none cursor-pointer">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="truncate">
+                      {statusFilter === "available"
+                        ? "Disponibles"
+                        : statusFilter === "reserved"
+                          ? "Reservados"
+                          : statusFilter === "delivered"
+                            ? "Entregados"
+                            : "Todos los estados"}
+                    </span>
+                  </div>
+                  <ChevronDown className="size-3.5 text-muted-foreground ml-1 group-hover:text-primary transition-colors shrink-0" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel>Estados</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={statusFilter}
+                    onValueChange={(val) => setStatusFilter(val as any)}>
+                    <DropdownMenuRadioItem value="available">
+                      Disponibles
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="reserved">
+                      Reservados
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="delivered">
+                      Entregados
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="all">
+                      Todos los estados
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Sort Dropdown Menu */}
+            <div className="flex justify-end items-center md:col-span-3 lg:col-span-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="group flex h-10 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary/20 hover:text-primary hover:!border-primary/20 outline-none cursor-pointer">
                   <span>
                     {sortBy === "newest"
                       ? "Más recientes primero"
@@ -750,9 +777,11 @@ export function DonorOffersSection({
                         ? "Más antiguos primero"
                         : "Orden alfabético (A-Z)"}
                   </span>
-                  <ChevronDown className="size-3.5 text-muted-foreground ml-1" />
+                  <ChevronDown className="size-3.5 text-muted-foreground ml-1 group-hover:text-primary transition-colors shrink-0" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
                   <DropdownMenuRadioGroup
                     value={sortBy}
                     onValueChange={(val) => setSortBy(val as any)}>
@@ -778,7 +807,7 @@ export function DonorOffersSection({
               <FilterChip
                 active={selectedCategory === "all"}
                 onClick={() => setSelectedCategory("all")}>
-                Todas ({inStockOffers.length})
+                Todas
               </FilterChip>
 
               {CATEGORIES.map((cat) => {
@@ -791,7 +820,7 @@ export function DonorOffersSection({
                     key={cat.value}
                     active={isSelected}
                     onClick={() => setSelectedCategory(cat.value)}>
-                    {cat.label} {count > 0 ? `(${count})` : ""}
+                    {cat.label}
                   </FilterChip>
                 );
               })}
@@ -803,7 +832,7 @@ export function DonorOffersSection({
                 variant="destructive"
                 size="sm"
                 onClick={clearFilters}
-                className="h-8 text-xs gap-1.5 px-2.5">
+                className="h-6 text-xs gap-1.5 px-2.5">
                 <Trash2 className="size-4" />
                 Limpiar filtros
               </Button>
@@ -811,8 +840,15 @@ export function DonorOffersSection({
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 w-full justify-end">
-          <span className="text-xs font-medium text-muted-foreground bg-card px-3 py-1.5">
-            {filteredOffers.length} ofertas disponibles
+          <span className="text-xs font-medium text-muted-foreground bg-card px-3 py-1.5 ">
+            {filteredOffers.length}{" "}
+            {statusFilter === "available"
+              ? "disponibles"
+              : statusFilter === "reserved"
+                ? "reservados"
+                : statusFilter === "delivered"
+                  ? "entregados"
+                  : "productos"}
           </span>
         </div>
         {/* Offers Cards Grid */}
@@ -831,18 +867,18 @@ export function DonorOffersSection({
           </div>
         ) : (
           /* Empty State */
-          <div className="mt-8 rounded-2xl border border-dashed border-border bg-card/50 p-12 text-center">
+          <div className="mt-8 rounded-2xl bg-card/50 p-12 text-center">
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-muted-foreground mb-4">
               {inStockOffers.length === 0 ? (
-                <Gift className="size-6 text-muted-foreground" />
+                <Gift className="size-6 text-primary" />
               ) : (
-                <SlidersHorizontal className="size-6 text-muted-foreground" />
+                <SlidersHorizontal className="size-6 text-primary" />
               )}
             </div>
             <h3 className="font-display text-lg font-semibold text-foreground">
               {inStockOffers.length === 0
-                ? "No hay ofertas de donantes con stock disponible por el momento"
-                : "No se encontraron ofertas"}
+                ? "No hay productos de donantes con stock disponible por el momento"
+                : "No se encontraron productos"}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
               {inStockOffers.length === 0

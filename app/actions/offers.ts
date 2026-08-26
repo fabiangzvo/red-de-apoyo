@@ -3,7 +3,12 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { items, donorOffers, itemReservations, type DonorOffer } from "@/lib/db/schema";
+import {
+  items,
+  donorOffers,
+  itemReservations,
+  type DonorOffer,
+} from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -90,7 +95,7 @@ export async function createDonorOffer(data: {
     return { ok: true, item: newItem, offer: newOffer };
   } catch (error: any) {
     console.error("Error creating donor offer:", error);
-    return { ok: false, error: "Error al registrar la oferta de donación." };
+    return { ok: false, error: "Error al registrar la productos de donación." };
   }
 }
 
@@ -210,7 +215,7 @@ export async function deleteDonorOffer(offerId: number) {
     revalidatePath("/mis-donaciones");
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: "Error al eliminar la oferta" };
+    return { ok: false, error: "Error al eliminar el producto" };
   }
 }
 

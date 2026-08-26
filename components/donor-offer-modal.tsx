@@ -275,7 +275,7 @@ export function DonorOfferModal({
               <span>
                 {isEditing
                   ? "¡Donación actualizada con éxito!"
-                  : `¡${validCount > 1 ? `${validCount} ofertas registradas` : "Ayuda registrada"} con éxito!`}
+                  : `¡${validCount > 1 ? `${validCount} productos registrados` : "Ayuda registrada"} con éxito!`}
               </span>
             </div>
           )}
@@ -375,10 +375,7 @@ export function DonorOfferModal({
                               });
                             }}
                             onBlur={() => {
-                              if (
-                                item.quantity === "" ||
-                                item.quantity < 1
-                              ) {
+                              if (item.quantity === "" || item.quantity < 1) {
                                 updateItem(item.id, { quantity: 1 });
                               }
                             }}

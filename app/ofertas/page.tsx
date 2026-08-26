@@ -5,7 +5,7 @@ import { DonorOffersSection } from "@/components/donor-offers-section";
 import { HeartHandshake } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Ofertas de Donantes | Levantándonos Colombia",
+  title: "Productos de Donantes | Levantándonos Colombia",
   description:
     "Consulta y busca ayudas, insumos y recursos donados directamente por la comunidad de voluntarios y donantes.",
 };
