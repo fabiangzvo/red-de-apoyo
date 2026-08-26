@@ -112,7 +112,7 @@ function RequestHelpModal({
   const reservedQty = offer.quantityReserved || 0;
   const availableQty = Math.max(0, totalQty - reservedQty);
 
-  const [requestQty, setRequestQty] = useState<number>(
+  const [requestQty, setRequestQty] = useState<number | "">(
     availableQty > 0 ? 1 : 0,
   );
 
@@ -150,7 +150,7 @@ function RequestHelpModal({
         offer.id,
         volunteerName.trim(),
         volunteerContact.trim(),
-        requestQty,
+        requestQty || 0,
       );
       if (!res.ok) {
         setError(res.error || "No se pudo solicitar la donación.");
@@ -269,9 +269,12 @@ function RequestHelpModal({
                 max={availableQty}
                 value={requestQty}
                 onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (isNaN(val)) setRequestQty(1);
-                  else setRequestQty(Math.min(availableQty, Math.max(1, val)));
+                  const val = e.target.value;
+                  setRequestQty(
+                    val === ""
+                      ? ""
+                      : Math.min(availableQty, Math.max(1, Number(val))),
+                  );
                 }}
                 className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-primary"
               />
