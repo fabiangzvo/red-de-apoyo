@@ -41,7 +41,6 @@ const RADIUS_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { label: "Todos", value: null },
-  { label: "Disponibles", value: "available" },
   { label: "Pendientes", value: "pending" },
   { label: "Reservados", value: "reserved" },
   { label: "Entregados", value: "delivered" },
@@ -141,31 +140,37 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
         return { ...p, distance };
       })
       .filter((p) => {
-        // Type filter: keep points that have at least one item of type
-        if (
-          isDonation !== null &&
-          !p.items.some((i) => Boolean(i.isDonation) === isDonation)
-        )
-          return false;
-        // Category filter: keep points that have at least one item in category
-        if (category && !p.items.some((i) => i.category === category))
-          return false;
-        // Status filter: "delivered" requires all items to be delivered
-        if (statusFilter === "delivered") {
+        // Filter items within the point that match type and category
+        const matchingItems = p.items.filter((i) => {
           if (
-            p.items.length === 0 ||
-            !p.items.every((i) => getItemEffectiveStatus(i) === "delivered")
-          )
+            isDonation !== null &&
+            Boolean(i.isDonation) !== isDonation
+          ) {
             return false;
-        } else if (
-          statusFilter &&
-          !p.items.some((i) => getItemEffectiveStatus(i) === statusFilter)
-        ) {
-          return false;
+          }
+          if (category && i.category !== category) {
+            return false;
+          }
+          return true;
+        });
+
+        if (matchingItems.length === 0) return false;
+
+        // Status filter: keep points that have at least one matching item with the selected status
+        if (statusFilter) {
+          if (
+            !matchingItems.some(
+              (i) => getItemEffectiveStatus(i) === statusFilter,
+            )
+          ) {
+            return false;
+          }
         }
+
         // Radius filter (only when we know user location)
         if (radiusKm != null && p.distance != null && p.distance > radiusKm)
           return false;
+
         return true;
       })
       .sort((a, b) => {
@@ -223,14 +228,21 @@ export function HelpMapView({ points }: { points: PointWithItems[] }) {
           </div>
           <p className="font-semibold mt-4 text-sm">Estado</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {STATUS_OPTIONS.map((s) => (
-              <FilterChip
-                key={s.label}
-                active={statusFilter === s.value}
-                onClick={() => handleStatusChange(s.value)}>
-                {s.label}
-              </FilterChip>
-            ))}
+            {[
+              ...STATUS_OPTIONS,
+              isDonation ? { label: "Disponibles", value: "available" } : null,
+            ]
+              .filter(
+                (s): s is { label: string; value: string | null } => s !== null,
+              )
+              .map((s) => (
+                <FilterChip
+                  key={s.label}
+                  active={statusFilter === s.value}
+                  onClick={() => handleStatusChange(s.value)}>
+                  {s.label}
+                </FilterChip>
+              ))}
           </div>
           <p className="font-semibold mt-4 text-sm flex gap-3 items-center justify-between w-full">
             <label>Radio de búsqueda</label>
@@ -429,6 +441,12 @@ function PointList({
                     <span className="inline-flex items-center gap-1 font-medium text-reserved">
                       <StatusDot status="reserved" />
                       {reserved} {reserved === 1 ? "reservado" : "reservados"}
+                    </span>
+                  )}
+                  {delivered > 0 && (
+                    <span className="inline-flex items-center gap-1 font-medium text-delivered">
+                      <StatusDot status="delivered" />
+                      {delivered} {delivered === 1 ? "entregado" : "entregados"}
                     </span>
                   )}
                 </div>

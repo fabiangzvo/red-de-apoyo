@@ -45,9 +45,9 @@ export function getItemEffectiveStatus(item: {
   isDonation?: boolean | null;
 }): ItemStatus {
   const rawStatus = (item.status || "pending").toLowerCase();
-  if (rawStatus === "delivered") return "delivered";
-
   const total = item.quantity ?? 1;
+  if (rawStatus === "delivered" || total <= 0) return "delivered";
+
   const reserved = item.quantityReserved ?? 0;
   const available = Math.max(0, total - reserved);
 
