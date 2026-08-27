@@ -10,7 +10,7 @@ import {
   users,
   type DonorOffer,
 } from "@/lib/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function createDonorOffer(data: {
@@ -196,35 +196,69 @@ export async function getUserOffers() {
       .where(eq(donorOffers.userId, userId))
       .orderBy(desc(donorOffers.createdAt));
 
-    const mappedItems = donationItems.map((item) => ({
-      id: item.id,
-      userId: item.userId,
-      donorName: item.reservedBy || session?.user?.name || "Donante",
-      donorContact: item.reservedByContact || "Contacto no especificado",
-      category: item.category,
-      title: item.product,
-      detail: item.detail,
-      locationName: null,
-      status: item.status,
-      createdAt: item.createdAt,
-      quantity: item.quantity,
-      quantityReserved: item.quantityReserved,
-    }));
+    const allReservations = await db
+      .select()
+      .from(itemReservations)
+      .where(ne(itemReservations.status, "cancelled"))
+      .orderBy(desc(itemReservations.createdAt));
 
-    const mappedOffers = legacyOffers.map((offer) => ({
-      id: offer.id,
-      userId: offer.userId,
-      donorName: offer.donorName,
-      donorContact: offer.donorContact,
-      category: offer.category,
-      title: offer.title,
-      detail: offer.detail,
-      locationName: offer.locationName,
-      status: offer.status,
-      createdAt: offer.createdAt,
-      quantity: offer.quantity,
-      quantityReserved: 0,
-    }));
+    const mappedItems = donationItems.map((item) => {
+      const itemRes = allReservations.filter((r) => r.itemId === item.id);
+      if (
+        itemRes.length === 0 &&
+        item.reservedBy &&
+        item.reservedByContact &&
+        (item.quantityReserved > 0 || item.status === "delivered")
+      ) {
+        itemRes.push({
+          id: -item.id,
+          itemId: item.id,
+          name: item.reservedBy,
+          contact: item.reservedByContact,
+          quantity: item.quantityReserved || 1,
+          status: item.status === "delivered" ? "delivered" : "reserved",
+          createdAt: item.reservedAt || item.createdAt || new Date(),
+        });
+      }
+
+      return {
+        id: item.id,
+        userId: item.userId,
+        donorName: session?.user?.name || "Donante",
+        donorContact:
+          session?.user?.phone ||
+          session?.user?.email ||
+          "Contacto no especificado",
+        category: item.category,
+        title: item.product,
+        detail: item.detail,
+        locationName: null,
+        status: item.status,
+        createdAt: item.createdAt,
+        quantity: item.quantity,
+        quantityReserved: item.quantityReserved,
+        reservations: itemRes,
+      };
+    });
+
+    const mappedOffers = legacyOffers.map((offer) => {
+      const offerRes = allReservations.filter((r) => r.itemId === offer.id);
+      return {
+        id: offer.id,
+        userId: offer.userId,
+        donorName: offer.donorName,
+        donorContact: offer.donorContact,
+        category: offer.category,
+        title: offer.title,
+        detail: offer.detail,
+        locationName: offer.locationName,
+        status: offer.status,
+        createdAt: offer.createdAt,
+        quantity: offer.quantity,
+        quantityReserved: 0,
+        reservations: offerRes,
+      };
+    });
 
     return mappedItems.length > 0 ? mappedItems : mappedOffers;
   } catch (error) {

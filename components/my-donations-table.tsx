@@ -15,6 +15,11 @@ import {
   MapPin,
   Phone,
   MoreVertical,
+  Eye,
+  Users,
+  Clock,
+  CircleCheckBig,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +53,7 @@ import { cn } from "@/lib/utils";
 import { deleteDonorOffer } from "@/app/actions/offers";
 import { DonorOfferModal } from "@/components/donor-offer-modal";
 import { StatusBadge } from "@/components/status-badge";
+import type { ItemReservation } from "@/lib/db/schema";
 
 export interface OfferItem {
   id: number;
@@ -62,16 +68,204 @@ export interface OfferItem {
   locationName: string | null;
   status: string;
   createdAt: Date | string;
+  reservations?: ItemReservation[];
+}
+
+function OfferDetailsModal({
+  isOpen,
+  onClose,
+  offer,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  offer: OfferItem | null;
+}) {
+  if (!isOpen || !offer) return null;
+
+  const total = offer.quantity ?? 1;
+  const reserved = offer.quantityReserved ?? 0;
+  const status = getItemEffectiveStatus({
+    status: offer.status,
+    quantity: offer.quantity,
+    quantityReserved: offer.quantityReserved,
+    isDonation: true,
+  });
+  const available =
+    status === "delivered" || status === "reserved"
+      ? 0
+      : Math.max(0, total - reserved);
+
+  const reservations = offer.reservations || [];
+  const deliveredCount = reservations.filter(
+    (r) => r.status === "delivered",
+  ).length;
+  const reservedCount = reservations.filter(
+    (r) => r.status === "reserved",
+  ).length;
+  const deliveredQty = reservations
+    .filter((r) => r.status === "delivered")
+    .reduce((acc, r) => acc + (r.quantity || 1), 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in-0 duration-200">
+      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
+        {/* Close Button */}
+        <Button
+          type="button"
+          onClick={onClose}
+          variant="ghost"
+          className="absolute right-4 top-4 z-10 transition p-1.5 rounded-full"
+          aria-label="Cerrar modal">
+          <X className="size-4" />
+        </Button>
+
+        {/* Modal Header */}
+        <div className="p-6 border-b border-border bg-gradient-to-b from-primary/10 via-primary/5 to-transparent shrink-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className={cn(
+                "rounded-md border px-2 py-0.5 text-xs font-semibold shadow-xs",
+                categoryColor(offer.category),
+              )}>
+              {categoryLabel(offer.category)}
+            </span>
+          </div>
+          <h2 className="font-display text-xl font-bold tracking-tight text-foreground pr-6">
+            {offer.title}
+          </h2>
+          {offer.detail && (
+            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+              {offer.detail}
+            </p>
+          )}
+
+          {/* Quantities summary */}
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md">
+              Disponibles: {available}
+            </span>
+            {reserved > 0 && (
+              <span className="inline-flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md">
+                Reservadas: {reserved}
+              </span>
+            )}
+            {deliveredQty > 0 && (
+              <span className="inline-flex items-center gap-1 font-medium text-delivered bg-delivered/10 px-2.5 py-1 rounded-md">
+                Entregadas: {deliveredQty}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Content / Users List */}
+        <div className="p-6 overflow-y-auto space-y-4 flex-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Users className="size-4 text-primary" />
+              Solicitantes y Receptores ({reservations.length})
+            </h3>
+            {reservations.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {deliveredCount} entregados • {reservedCount} reservados
+              </span>
+            )}
+          </div>
+
+          {reservations.length > 0 ? (
+            <div className="space-y-3">
+              {reservations.map((res) => {
+                const isDelivered = res.status === "delivered";
+                const cleanPhone = res.contact.replace(/\D/g, "");
+                const isPhone = cleanPhone.length >= 7;
+
+                return (
+                  <div
+                    key={res.id}
+                    className="flex flex-col gap-2.5 rounded-xl border border-border bg-background p-4 shadow-xs transition-all hover:border-primary/40">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        {/* User Name */}
+                        <div className="flex items-center gap-2">
+                          <User className="size-4 text-primary shrink-0" />
+                          <span className="font-semibold text-sm text-foreground">
+                            {res.name}
+                          </span>
+                        </div>
+
+                        {/* Contact Info */}
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                          <Phone className="size-3.5 text-muted-foreground shrink-0" />
+                          <span className="font-mono text-foreground font-medium">
+                            {res.contact}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      {isDelivered ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                          <CircleCheckBig className="size-3.5" />
+                          Entregado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                          <Clock className="size-3.5" />
+                          Reservado
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quantity & Date Footer */}
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-border text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        Solicitó:{" "}
+                        <strong className="text-primary">{res.quantity}</strong>{" "}
+                        {res.quantity === 1 ? "unidad" : "unidades"}
+                      </span>
+                      {res.createdAt && (
+                        <span className="text-[11px]">
+                          {new Date(res.createdAt).toLocaleDateString("es-CO", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Empty State */
+            <div className="py-10 text-center rounded-xl border border-dashed border-border bg-muted/20">
+              <User className="mx-auto size-10 text-muted-foreground/50 mb-2" />
+              <p className="font-medium text-sm text-foreground">
+                Sin solicitudes registradas
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                Aún ningún usuario ha reservado o solicitado esta donación.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function MyOfferCard({
   item,
   onEdit,
   onDelete,
+  onViewDetails,
 }: {
   item: OfferItem;
   onEdit: (item: OfferItem) => void;
   onDelete: (item: OfferItem) => void;
+  onViewDetails: (item: OfferItem) => void;
 }) {
   const status = getItemEffectiveStatus({
     status: item.status,
@@ -86,6 +280,11 @@ function MyOfferCard({
     status === "delivered" || status === "reserved"
       ? 0
       : Math.max(0, total - reserved);
+
+  const reservations = item.reservations || [];
+  const deliveredQty = reservations
+    .filter((r) => r.status === "delivered")
+    .reduce((acc, r) => acc + (r.quantity || 1), 0);
 
   return (
     <div
@@ -140,10 +339,17 @@ function MyOfferCard({
         </p>
 
         {/* Detail */}
-        {item.detail && (
-          <p className="mt-1 text-sm text-muted-foreground leading-relaxed line-clamp-3">
-            {item.detail}
-          </p>
+        <p className="mt-1 text-sm text-muted-foreground leading-relaxed line-clamp-3">
+          {item.detail || "Sin detalles"}
+        </p>
+        {/* Location info if present */}
+        {item.locationName && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-4">
+            <MapPin className="size-3.5 text-primary/70 shrink-0" />
+            <span className="truncate font-medium text-foreground">
+              {item.locationName}
+            </span>
+          </div>
         )}
 
         {/* Quantities Stock Info */}
@@ -156,21 +362,23 @@ function MyOfferCard({
               Reservadas: {reserved}
             </span>
           )}
-          <span className="inline-flex items-center gap-1 text-muted-foreground text-[11px]">
-            Total Stock: {total}
-          </span>
+          {deliveredQty > 0 && (
+            <span className="inline-flex items-center gap-1 font-medium text-delivered bg-delivered/10 px-2 py-0.5 rounded-md">
+              Entregadas: {deliveredQty}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Location info if present */}
-      {item.locationName && (
-        <div className="mt-3 pt-2.5 border-t border-border flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="size-3.5 text-primary/70 shrink-0" />
-          <span className="truncate font-medium text-foreground">
-            {item.locationName}
-          </span>
-        </div>
-      )}
+      <div className="mt-4 pt-3 border-t border-border space-y-2">
+        {/* Action Button: Ver detalles */}
+        <Button
+          size="sm"
+          onClick={() => onViewDetails(item)}
+          className="w-full font-medium">
+          <span>Ver detalles</span>
+        </Button>
+      </div>
     </div>
   );
 }
@@ -184,6 +392,7 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<OfferItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<OfferItem | null>(null);
+  const [detailItem, setDetailItem] = useState<OfferItem | null>(null);
 
   const handleEdit = (item: OfferItem) => {
     setEditingItem(item);
@@ -193,6 +402,10 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
   const handleCreateNew = () => {
     setEditingItem(null);
     setIsModalOpen(true);
+  };
+
+  const handleViewDetails = (item: OfferItem) => {
+    setDetailItem(item);
   };
 
   const confirmDelete = async () => {
@@ -311,6 +524,7 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
                 item={item}
                 onEdit={handleEdit}
                 onDelete={setItemToDelete}
+                onViewDetails={handleViewDetails}
               />
             ))}
           </div>
@@ -340,6 +554,12 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
           </div>
         )}
       </div>
+
+      <OfferDetailsModal
+        isOpen={Boolean(detailItem)}
+        onClose={() => setDetailItem(null)}
+        offer={detailItem}
+      />
 
       <DonorOfferModal
         isOpen={isModalOpen}
