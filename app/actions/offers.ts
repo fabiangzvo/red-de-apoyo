@@ -7,6 +7,7 @@ import {
   items,
   donorOffers,
   itemReservations,
+  users,
   type DonorOffer,
 } from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
@@ -112,26 +113,58 @@ export async function getDonorOffers() {
       .from(itemReservations)
       .where(eq(itemReservations.status, "reserved"));
 
+    const allUsers = await db.select().from(users);
+    const legacyOffers = await db.select().from(donorOffers);
+
     if (donationItems.length > 0) {
-      return donationItems.map((item) => ({
-        id: item.id,
-        userId: item.userId,
-        donorName: item.reservedBy || "Donante",
-        donorContact: item.reservedByContact || "Contacto no especificado",
-        category: item.category,
-        title: item.product,
-        detail: item.detail,
-        locationName: null,
-        lat: null,
-        lng: null,
-        status: item.status,
-        createdAt: item.createdAt,
-        quantity: item.quantity,
-        quantityReserved: item.quantityReserved,
-        reservedBy: item.reservedBy,
-        reservedByContact: item.reservedByContact,
-        reservations: allReservations.filter((r) => r.itemId === item.id),
-      }));
+      return donationItems.map((item) => {
+        const user = item.userId
+          ? allUsers.find((u) => u.id === item.userId)
+          : null;
+
+        const legacyOffer = legacyOffers.find(
+          (o) =>
+            o.id === item.id ||
+            (item.userId && o.userId === item.userId && o.title === item.product),
+        );
+
+        const donorName =
+          user?.name ||
+          legacyOffer?.donorName ||
+          (item.quantityReserved === 0 ? item.reservedBy : null) ||
+          "Donante registrado";
+
+        const donorContact =
+          user?.phone ||
+          user?.email ||
+          legacyOffer?.donorContact ||
+          (item.quantityReserved === 0 ? item.reservedByContact : null) ||
+          "Contacto no especificado";
+
+        const locationName = legacyOffer?.locationName || null;
+        const lat = legacyOffer?.lat ?? null;
+        const lng = legacyOffer?.lng ?? null;
+
+        return {
+          id: item.id,
+          userId: item.userId,
+          donorName,
+          donorContact,
+          category: item.category,
+          title: item.product,
+          detail: item.detail,
+          locationName,
+          lat,
+          lng,
+          status: item.status,
+          createdAt: item.createdAt,
+          quantity: item.quantity,
+          quantityReserved: item.quantityReserved,
+          reservedBy: item.reservedBy,
+          reservedByContact: item.reservedByContact,
+          reservations: allReservations.filter((r) => r.itemId === item.id),
+        };
+      });
     }
 
     const offers = await db

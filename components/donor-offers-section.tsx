@@ -510,11 +510,6 @@ function OfferCard({
                   Cancelar solicitud
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Has solicitado {userReservedQty}{" "}
-                {userReservedQty === 1 ? "unidad" : "unidades"}. El donante se
-                pondrá en contacto contigo.
-              </p>
             </div>
           )}
 
