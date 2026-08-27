@@ -287,7 +287,14 @@ export function ItemRow({
         </div>
       )}
 
-      {reservedQty > 0 && isCurrentUserReserved && (
+      {status === "delivered" && (
+        <div className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 py-2 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          <CircleCheckBig className="size-4 shrink-0" />
+          <span>Ayuda recibida y entregada con éxito</span>
+        </div>
+      )}
+
+      {reservedQty > 0 && isCurrentUserReserved && status !== "delivered" && (
         <p className="mt-2 text-xs text-muted-foreground">
           {item.isDonation
             ? `Has solicitado ${userReservedQty} ${userReservedQty === 1 ? "unidad" : "unidades"}. El donante se pondrá en contacto contigo.`

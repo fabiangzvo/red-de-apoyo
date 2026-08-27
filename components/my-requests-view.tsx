@@ -403,8 +403,15 @@ export function MyRequestsView() {
                       )}
                   </div>
 
-                  {/* Action Buttons */}
-                  {item.reservationStatus !== "delivered" && (
+                  {/* Action Buttons / Delivered Status Message */}
+                  {item.reservationStatus === "delivered" ? (
+                    <div className="pt-4 border-t border-border">
+                      <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 py-2 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        <CircleCheckBig className="size-4 shrink-0" />
+                        <span>Ayuda recibida y entregada con éxito</span>
+                      </div>
+                    </div>
+                  ) : (
                     <div className="space-y-2 pt-4 border-t border-border">
                       <div className="flex items-center gap-2">
                         <Button
