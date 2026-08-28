@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -19,6 +19,7 @@ import {
   Users,
   Clock,
   CircleCheckBig,
+  LoaderCircle,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ import {
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { deleteDonorOffer } from "@/app/actions/offers";
+import { deliverItem } from "@/app/actions/needs";
 import { DonorOfferModal } from "@/components/donor-offer-modal";
 import { StatusBadge } from "@/components/status-badge";
 import type { ItemReservation } from "@/lib/db/schema";
@@ -80,7 +82,31 @@ function OfferDetailsModal({
   onClose: () => void;
   offer: OfferItem | null;
 }) {
+  const router = useRouter();
+  const [pendingResId, setPendingResId] = useState<number | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
   if (!isOpen || !offer) return null;
+
+  const handleDeliver = (contact: string, resId: number) => {
+    setPendingResId(resId);
+    setError(null);
+    startTransition(async () => {
+      try {
+        const res = await deliverItem(offer.id, contact);
+        if (!res.ok && res.error) {
+          setError(res.error);
+        } else {
+          router.refresh();
+        }
+      } catch (err) {
+        setError("Error al marcar como recibido.");
+      } finally {
+        setPendingResId(null);
+      }
+    });
+  };
 
   const total = offer.quantity ?? 1;
   const reserved = offer.quantityReserved ?? 0;
@@ -159,6 +185,20 @@ function OfferDetailsModal({
 
         {/* Modal Content / Users List */}
         <div className="p-6 overflow-y-auto space-y-4 flex-1">
+          {error && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 text-xs font-medium text-destructive flex items-center justify-between">
+              <span>{error}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs hover:bg-destructive/20"
+                onClick={() => setError(null)}>
+                Descartar
+              </Button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Users className="size-4 text-primary" />
@@ -234,6 +274,23 @@ function OfferDetailsModal({
                         </span>
                       )}
                     </div>
+
+                    {!isDelivered && (
+                      <div className="pt-1.5">
+                        <Button
+                          size="sm"
+                          className="w-full h-8 text-xs font-medium gap-1.5"
+                          onClick={() => handleDeliver(res.contact, res.id)}
+                          disabled={pendingResId === res.id || isPending}>
+                          {pendingResId === res.id && isPending ? (
+                            <LoaderCircle className="size-3.5 animate-spin" />
+                          ) : (
+                            <CircleCheckBig className="size-3.5" />
+                          )}
+                          <span>Marcar como entregado</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -392,7 +449,12 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<OfferItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<OfferItem | null>(null);
-  const [detailItem, setDetailItem] = useState<OfferItem | null>(null);
+  const [detailItemId, setDetailItemId] = useState<number | null>(null);
+
+  const detailItem = useMemo(
+    () => offers.find((o) => o.id === detailItemId) || null,
+    [offers, detailItemId],
+  );
 
   const handleEdit = (item: OfferItem) => {
     setEditingItem(item);
@@ -405,7 +467,7 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
   };
 
   const handleViewDetails = (item: OfferItem) => {
-    setDetailItem(item);
+    setDetailItemId(item.id);
   };
 
   const confirmDelete = async () => {
@@ -557,7 +619,7 @@ export function MyDonationsTable({ offers }: { offers: OfferItem[] }) {
 
       <OfferDetailsModal
         isOpen={Boolean(detailItem)}
-        onClose={() => setDetailItem(null)}
+        onClose={() => setDetailItemId(null)}
         offer={detailItem}
       />
 
