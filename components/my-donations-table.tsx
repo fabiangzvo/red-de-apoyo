@@ -133,21 +133,21 @@ function OfferDetailsModal({
     .reduce((acc, r) => acc + (r.quantity || 1), 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in-0 duration-200">
-      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
-        {/* Close Button */}
-        <Button
-          type="button"
-          onClick={onClose}
-          variant="ghost"
-          className="absolute right-4 top-4 z-10 transition p-1.5 rounded-full"
-          aria-label="Cerrar modal">
-          <X className="size-4" />
-        </Button>
-
+    <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 flex min-h-full items-start sm:items-center justify-center bg-background/80 backdrop-blur-md animate-in fade-in-0 duration-200">
+      <div className="relative w-full max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-y-auto my-auto rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="p-6 border-b border-border bg-gradient-to-b from-primary/10 via-primary/5 to-transparent shrink-0">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="relative p-6 border-b border-border bg-gradient-to-b from-primary/10 via-primary/5 to-transparent">
+          {/* Close Button */}
+          <Button
+            type="button"
+            onClick={onClose}
+            variant="ghost"
+            className="absolute right-4 top-4 z-10 transition p-1.5 rounded-full"
+            aria-label="Cerrar modal">
+            <X className="size-4" />
+          </Button>
+
+          <div className="flex items-center gap-2 mb-2 pr-8">
             <span
               className={cn(
                 "rounded-md border px-2 py-0.5 text-xs font-semibold shadow-xs",
@@ -156,7 +156,7 @@ function OfferDetailsModal({
               {categoryLabel(offer.category)}
             </span>
           </div>
-          <h2 className="font-display text-xl font-bold tracking-tight text-foreground pr-6">
+          <h2 className="font-display text-xl font-bold tracking-tight text-foreground pr-8">
             {offer.title}
           </h2>
           {offer.detail && (
@@ -184,7 +184,7 @@ function OfferDetailsModal({
         </div>
 
         {/* Modal Content / Users List */}
-        <div className="p-6 overflow-y-auto space-y-4 flex-1">
+        <div className="p-6 space-y-4">
           {error && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 text-xs font-medium text-destructive flex items-center justify-between">
               <span>{error}</span>
